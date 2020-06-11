@@ -18,10 +18,6 @@ sub open_file {
     open(my $fh, '<', $path) or die "failed to open file: $path";
     $lines++ while (<$fh>);
 
-    # if ($lines != $expect) {
-    #     return undef;
-    # }
-
     seek $fh, 0, 0;
     return $fh;
 }
@@ -340,7 +336,7 @@ sub parse {
 
 sub parse_latency {
     my ($lib, $iter, $path, $unit) = @_;
-    my ($ts, $avg, $intra, $inter, $cnt) = (0) x 5;
+    my ($frames, $avg, $intra, $inter, $cnt) = (0) x 5;
 
     open my $fh, '<', $path or die "failed to open file $path\n";
 
