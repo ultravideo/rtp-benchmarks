@@ -2,17 +2,19 @@
 
 This repository contains all benchmarking code related to the benchmark of uvgRTP against LIVE555 and FFmpeg.
 
-Directories [uvgrtp](), [ffmpeg](), and [live555]() contain the C++ implementations for RTP (latency) senders and receivers.
+Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP (latency) senders and receivers.
 
 Script benchmark.pl can be used to automate the benchmark runs and its usage is described below.
 
 Script parse.pl can be used to parse the output of benchmark runs.
 
-This repository also contains file [udperf.c](udperf.c) which can be used to test the throughput of a network and it was used for the paper to determine the upper limit for UDP traffic using 1500-byte Ethernet frames.
+This repository also contains the file [udperf.c](udperf.c) which can be used to test the throughput of a network and it was used for the paper to determine the upper limit for UDP traffic using 1500-byte Ethernet frames.
 
 ## Running the benchmarks
 
-### Example 1
+The benchmark script is quite flexible and capable of running all kinds of benchmark runs. You can, for example, provide a list of executables that it will execute or a range or list of FPS values it should test. You can also capture the stream using netcat if you're only interested in send benchmarks.
+
+### Example 1 - send/recv goodput
 
 Benchmark uvgRTP's send goodput. Run the benchmark configuration with 8 different thread settings
 so first starting with 8 threads, then 7 threads then 6 etc.
@@ -40,7 +42,6 @@ Receiver
 ./benchmark.pl \
    --lib uvgrtp \
    --role recv \
-   --use-nc \
    --addr 127.0.0.1 \
    --port 9999 \
    --threads 3 \
@@ -49,9 +50,12 @@ Receiver
    --iter 20
 ```
 
-### Example 2
+### Example 2 - netcat
 
 Benchmark uvgRTP's send goodput using netcat
+
+Using netcat to capture the stream requires [OpenBSD's netcat](https://github.com/openbsd/src/blob/master/usr.bin/nc/netcat.c)
+and [GNU Parallel](https://www.gnu.org/software/parallel/)
 
 Sender
 ```
@@ -78,6 +82,29 @@ Receiver
    --start 30 \
    --end 60 \
 ```
+
+### Example 3 - Latency
+
+Sender
+```
+./benchmark.pl \
+   --lib uvgrtp \
+   --role send \
+   --latency
+   --addr 127.0.0.1 \
+   --port 9999
+```
+
+Receiver
+```
+./benchmark.pl \
+   --lib uvgrtp \
+   --role recv \
+   --latency \
+   --addr 127.0.0.1 \
+   --port 9999
+```
+
 
 ## Parsing the benchmark results
 
@@ -112,10 +139,10 @@ NB2: `--iter` needn't be provided if file names follow the pattern defined above
 #### Find best configuration
 
 Find the best configurations for maximizing single-thread performance and total performance
-where frame loss is less than 2%
+where frame loss is no more than 2%
 
 ```
-./parse.pl --path results/uvgrtp/all --iter 10 --parse=best --frame-loss=2 
+./parse.pl --path results/uvgrtp/all --iter 10 --parse=best --frame-loss=2
 ```
 
 #### Output goodput/frame loss values to a CSV file
@@ -123,4 +150,10 @@ where frame loss is less than 2%
 
 ```
 ./parse.pl --path results/uvgrtp/all --parse=csv
+```
+
+#### Calculate averages for inter/intra/frame
+
+```
+./parse.pl --path results/uvgrtp/latencies --parse=latency
 ```

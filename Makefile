@@ -37,7 +37,7 @@ live555_sender:
 		-I /usr/local/include/groupsock  \
 		-I /usr/local/include/BasicUsageEnvironment \
 		-I /usr/local/include/UsageEnvironment \
-		-lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
+		-lkvazaar -lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
 		-lUsageEnvironment -lcrypto -lssl
 
 live555_receiver:

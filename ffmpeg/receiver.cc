@@ -17,6 +17,25 @@ struct thread_info {
 } *thread_info;
 
 std::atomic<int> nready(0);
+std::chrono::high_resolution_clock::time_point last;
+size_t pkts = 0;
+
+static int cb(void *ctx)
+{
+    if (pkts) {
+        uint64_t diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() - last
+        ).count();
+
+        /* we haven't received a frame in the last 300 milliseconds, stop receiver */
+        if (diff >= 300)
+            return 1;
+    }
+
+    return 0;
+}
+
+static const AVIOInterruptCB int_cb = { cb, NULL };
 
 void thread_func(char *addr, int thread_num)
 {
@@ -27,6 +46,8 @@ void thread_func(char *addr, int thread_num)
     /* register everything */
     av_register_all();
     avformat_network_init();
+
+    format_ctx->interrupt_callback = int_cb;
 
     av_log_set_level(AV_LOG_PANIC);
 
@@ -95,12 +116,11 @@ void thread_func(char *addr, int thread_num)
             video_stream_index = i;
     }
 
-    size_t pkts = 0;
     size_t size = 0;
     AVPacket packet;
     av_init_packet(&packet);
 
-    std::chrono::high_resolution_clock::time_point start, last;
+    std::chrono::high_resolution_clock::time_point start;
     start = std::chrono::high_resolution_clock::now();
 
     /* start reading packets from stream */
@@ -113,10 +133,8 @@ void thread_func(char *addr, int thread_num)
         av_free_packet(&packet);
         av_init_packet(&packet);
 
-        if (++pkts == 598)
-            break;
-        else
-            last = std::chrono::high_resolution_clock::now();
+        pkts += 1;
+        last  = std::chrono::high_resolution_clock::now();
     }
 
     if (pkts == 598) {

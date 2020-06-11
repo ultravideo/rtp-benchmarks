@@ -145,7 +145,6 @@ void H265FramedSource::deliverFrame()
     auto nal = find_next_nal();
 
     if (!nal.first || !nal.second) {
-        e_tmr = std::chrono::high_resolution_clock::now();
         uint64_t diff = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(e_tmr - s_tmr).count();
         fprintf(stderr, "%lu bytes, %lu kB, %lu MB took %lu ms %lu s\n",
             bytes, bytes / 1000, bytes / 1000 / 1000,
@@ -181,6 +180,6 @@ void H265FramedSource::deliverFrame()
     memmove(fTo, newFrameDataStart, fFrameSize);
 
     delivery_mtx.unlock();
-
     FramedSource::afterGetting(this);
+    e_tmr = std::chrono::high_resolution_clock::now();
 }
