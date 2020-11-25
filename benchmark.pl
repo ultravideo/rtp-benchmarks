@@ -184,6 +184,7 @@ GetOptions(
     "use-nc"      => \(my $nc = 0),
     "fps=s"       => \(my $fps = ""),
     "latency"     => \(my $lat = 0),
+    "srtp"        => \(my $srtp = 0),
     "mode=s"      => \(my $mode = "best-effort"),
     "exec=s"      => \(my $exec = "default"),
     "help"        => \(my $help = 0)
@@ -219,7 +220,11 @@ if ($role eq "send") {
         lat_send($lib, $addr, $port);
     } else {
         if ($exec eq "default") {
-            system "make $lib" . "_sender";
+            if ($srtp) {
+                system "make $lib" . "_srtp_sender";
+            } else {
+                system "make $lib" . "_sender";
+            }
             $exec = "sender";
         }
         send_benchmark($lib, $addr, $port, $iter, $threads, $nc, $mode, $exec, @fps_vals);
@@ -230,7 +235,11 @@ if ($role eq "send") {
         lat_recv($lib, $addr, $port);
     } elsif (!$nc) {
         if ($exec eq "default") {
-            system "make $lib" . "_receiver";
+            if ($srtp) {
+                system "make $lib" . "_srtp_receiver";
+            } else {
+                system "make $lib" . "_receiver";
+            }
             $exec = "receiver";
         }
         recv_benchmark($lib, $addr, $port, $iter, $threads, $exec, @fps_vals);
