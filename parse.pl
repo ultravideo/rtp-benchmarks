@@ -130,7 +130,13 @@ sub parse_recv {
         $tb_avg += ($a_b / $threads);
         $tt_avg += ($a_t / $threads);
 
+        # $line = <$fh> if grep /Command/, $line;
+
         my ($usr, $sys, $total, $cpu) = ($line =~ m/(\d+\.\d+)user\s(\d+\.\d+)system\s0:(\d+.\d+)elapsed\s(\d+)%CPU/);
+
+        if (!defined($usr) or !defined($sys)) {
+            die "$line, $path";
+        }
 
         # discard line about inputs, outputs and pagefaults
         $line = <$fh>;
@@ -337,12 +343,17 @@ sub parse {
 sub parse_latency {
     my ($lib, $iter, $path, $unit) = @_;
     my ($frames, $avg, $intra, $inter, $cnt) = (0) x 5;
+    my $frame_avg = 0;
 
     open my $fh, '<', $path or die "failed to open file $path\n";
 
     # each iteration parses one benchmark run
     while (my $line = <$fh>) {
         my @nums = ($line =~ m/(\d+).*intra\s(\d+\.\d+).*inter\s(\d+\.\d+).*avg\s(\d+\.\d+)/);
+
+        if ($nums[0] == 598) {
+            $frame_avg++;
+        }
 
         $frames += $nums[0];
         $intra  += $nums[1];
@@ -353,7 +364,7 @@ sub parse_latency {
 
     $intra  /= $cnt;
     $inter  /= $cnt;
-    $avg    /= $cnt;
+    $avg    /= $frame_avg;
     $frames /= get_frame_count($lib);
 
     print "$frames: intra $intra, inter $inter, avg $avg\n";

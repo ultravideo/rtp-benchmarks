@@ -28,7 +28,7 @@ static int cb(void *ctx)
         ).count();
 
         /* we haven't received a frame in the last 300 milliseconds, stop receiver */
-        if (diff >= 300)
+        if (diff >= 10)
             return 1;
     }
 
@@ -92,6 +92,15 @@ void thread_func(char *addr, int thread_num)
     /*  Set number of frames used to probe fps. */
     snprintf(buf, sizeof(buf), "%d", 2);
     av_dict_set(&d, "fpsprobesize", buf, 32);
+
+    snprintf(buf, sizeof(buf), "%d", 1);
+    av_dict_set(&d, "stimeout", buf, 32);
+
+    snprintf(buf, sizeof(buf), "%d", 1);
+    av_dict_set(&d, "timeout", buf, 32);
+
+    snprintf(buf, sizeof(buf), "%d", 1);
+    av_dict_set(&d, "rw_timeout", buf, 32);
 #endif
 
     if (!strcmp(addr, "127.0.0.1"))

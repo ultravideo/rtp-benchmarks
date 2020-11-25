@@ -7,7 +7,7 @@ uvgrtp_receiver:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lkvazaar -lpthread
 
 uvgrtp_sender:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread
+	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread
 
 uvgrtp_latency_sender:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread
@@ -15,13 +15,17 @@ uvgrtp_latency_sender:
 uvgrtp_latency_receiver:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc -luvgrtp -lkvazaar -lpthread
 
+# ffmpeg_sender:
+# 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \
+# 		ffmpeg/sender.cc util/util.cc -lkvazaar `pkg-config --libs libavformat` -lpthread
+
 ffmpeg_sender:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \
-		ffmpeg/sender.cc util/util.cc -lkvazaar `pkg-config --libs libavformat` -lpthread
+		ffmpeg/sender.cc util/util.cc -lavformat -lavcodec -lswscale -lz -lavutil -lpthread
 
 ffmpeg_receiver:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/receiver \
-		ffmpeg/receiver.cc util/util.cc -lkvazaar -lavformat -lavcodec -lswscale -lz -lavutil -lpthread
+		ffmpeg/receiver.cc util/util.cc -lavformat -lavcodec -lswscale -lz -lavutil -lpthread
 
 ffmpeg_latency_sender:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/latency_sender \
