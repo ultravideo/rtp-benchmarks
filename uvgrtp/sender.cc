@@ -3,13 +3,21 @@
 #include <cstring>
 #include <algorithm> 
 
-#define MAX(a, b) (((int)(a) > (int)(b)) ? (int)(a) : (int)(b))
+#define USE_SRTP
+#define USE_VVC
 
-extern void *get_mem(int argc, char **argv, size_t& len);
+
+#define KEY_SIZE   16
+#define SALT_SIZE  14
+
+extern void* get_mem(int argc, char** argv, size_t& len);
 
 std::atomic<int> nready(0);
 
-void thread_func(void *mem, size_t len, char *addr, int thread_num, double fps, bool strict)
+constexpr int SOURCE_PORT = 9880;
+constexpr int DESTINATION_PORT = 8880;
+
+void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
 {
     size_t bytes_sent   = 0;
     uint64_t chunk_size = 0;
@@ -18,18 +26,44 @@ void thread_func(void *mem, size_t len, char *addr, int thread_num, double fps, 
 	uint64_t current    = 0;
 	uint64_t period     = (uint64_t)((1000 / (float)fps) * 1000);
     rtp_error_t ret     = RTP_OK;
-    std::string addr_("10.21.25.2");
+    std::string addr_("127.0.0.1");
+
+#ifdef USE_SRTP
+    int flags = RCE_SRTP | RCE_SRTP_KMNGMNT_USER;
+#else
+    int flags = 0;
+#endif // USE_SRTP
+
+#ifdef USE_VVC
+    rtp_format_t fmt = RTP_FORMAT_H266;
+#else
+    rtp_format_t fmt = RTP_FORMAT_H265;
+#endif
 
     uvg_rtp::context rtp_ctx;
 
     auto sess = rtp_ctx.create_session(addr_);
     auto hevc = sess->create_stream(
-        8889 + thread_num,
-        8888 + thread_num,
-        RTP_FORMAT_HEVC,
-        RCE_SYSTEM_CALL_DISPATCHER
+        SOURCE_PORT      + thread_num * 2, // every two ports just in case we decide to test RTCP later
+        DESTINATION_PORT + thread_num * 2,
+        fmt,
+        flags
     );
 
+#ifdef USE_SRTP
+    uint8_t key[16] = { 0 };
+    uint8_t salt[14] = { 0 };
+
+    for (int i = 0; i < KEY_SIZE; ++i)
+        key[i] = i + 7;
+    for (int i = 0; i < SALT_SIZE; ++i)
+        key[i] = i + 13;
+
+    hevc->add_srtp_ctx(key, salt);
+#endif // USE_SRTP
+
+
+    // start the sending test
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
     for (int rounds = 0; rounds < 1; ++rounds) {
@@ -39,21 +73,22 @@ void thread_func(void *mem, size_t len, char *addr, int thread_num, double fps, 
             offset     += sizeof(uint64_t);
             total_size += chunk_size;
 
-            if ((ret = hevc->push_frame((uint8_t *)mem + offset, chunk_size, 0)) != RTP_OK) {
+            if ((ret = hevc->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
                 fprintf(stderr, "push_frame() failed!\n");
                 for (;;);
             }
-			
+
             auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
                 std::chrono::high_resolution_clock::now() - start
-            ).count();
-			
-			if (runtime < current * period)
-				std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
-
-			current    += 1;
-            offset     += chunk_size;
+                ).count();
+            
+            offset += chunk_size;
             bytes_sent += chunk_size;
+
+            if (runtime < current * period)
+                std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
+
+            current += 1;
         }
     }
     rtp_ctx.destroy_session(sess);
@@ -80,14 +115,14 @@ int main(int argc, char **argv)
     size_t len   = 0;
     void *mem    = get_mem(0, NULL, len);
     int nthreads = atoi(argv[2]);
-    bool strict  = !strcmp(argv[4], "strict");
+    bool strict  = !strcmp(argv[4], "strict"); // not used
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
     for (int i = 0; i < nthreads; ++i)
-        threads[i] = new std::thread(thread_func, mem, len, argv[1], i * 2, atof(argv[3]), strict);
+        threads[i] = new std::thread(thread_func, mem, len, argv[1], i * 2, atof(argv[3]));
 
     while (nready.load() != nthreads)
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     for (int i = 0; i < nthreads; ++i) {
         threads[i]->join();

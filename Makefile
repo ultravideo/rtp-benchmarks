@@ -4,16 +4,10 @@ CXX = g++
 CXXFLAGS = -Wall -Wextra -O2 -std=c++11 -g
 
 uvgrtp_receiver:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lkvazaar -lpthread
+	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lkvazaar -lpthread -lcryptopp
 
 uvgrtp_sender:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread
-
-uvgrtp_srtp_receiver:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver_srtp.cc util/util.cc -luvgrtp -lkvazaar -lpthread -lcryptopp
-
-uvgrtp_srtp_sender:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender_srtp.cc util/util.cc -luvgrtp -lpthread -lcryptopp
+	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp
 
 uvgrtp_latency_sender:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread
