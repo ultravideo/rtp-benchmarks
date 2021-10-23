@@ -3,17 +3,18 @@
 CXX = g++
 CXXFLAGS = -Wall -Wextra -O2 -std=c++11 -g
 
-uvgrtp_receiver:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lkvazaar -lpthread -lcryptopp
-
 uvgrtp_sender:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp
+	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread -lcryptopp 
+
+uvgrtp_receiver:
+	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lpthread -lcryptopp
+
 
 uvgrtp_latency_sender:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread
 
 uvgrtp_latency_receiver:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc -luvgrtp -lkvazaar -lpthread
+	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc -luvgrtp -lpthread
 
 # ffmpeg_sender:
 # 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \
@@ -21,7 +22,7 @@ uvgrtp_latency_receiver:
 
 ffmpeg_sender:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \
-		ffmpeg/sender.cc util/util.cc -lavformat -lavcodec -lswscale -lz -lavutil -lpthread
+		ffmpeg/sender.cc util/util.cc -lavformat -lavcodec -lswscale -lz -lavutil -lkvazaar -lpthread 
 
 ffmpeg_receiver:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/receiver \
@@ -33,7 +34,7 @@ ffmpeg_latency_sender:
 
 ffmpeg_latency_receiver:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/latency_receiver \
-		ffmpeg/latency_receiver.cc util/util.cc -lkvazaar -lavformat -lavcodec -lswscale -lz -lavutil -lpthread
+		ffmpeg/latency_receiver.cc util/util.cc  -lavformat -lavcodec -lswscale -lz -lavutil -lpthread
 
 live555_sender:
 	$(CXX) $(CXXFLAGS) live555/sender.cc live555/source.cc util/util.cc -o live555/sender \
@@ -50,7 +51,7 @@ live555_receiver:
 		-I /usr/local/include/groupsock  \
 		-I /usr/local/include/BasicUsageEnvironment \
 		-I /usr/local/include/UsageEnvironment \
-		-lkvazaar -lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
+		-lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
 		-lUsageEnvironment -lcrypto -lssl
 
 live555_latency_sender:
@@ -68,7 +69,7 @@ live555_latency_receiver:
 		-I /usr/local/include/groupsock  \
 		-I /usr/local/include/BasicUsageEnvironment \
 		-I /usr/local/include/UsageEnvironment \
-		-lkvazaar -lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
+		-lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
 		-lUsageEnvironment -lcrypto -lssl
 
 clean:
