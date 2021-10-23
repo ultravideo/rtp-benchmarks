@@ -235,11 +235,7 @@ if ($role eq "send") {
         lat_send($lib, $addr, $port);
     } else {
         if ($exec eq "default") {
-            if ($srtp) {
-                system "make $lib" . "_srtp_sender";
-            } else {
-                system "make $lib" . "_sender";
-            }
+            system "make $lib" . "_sender";
             $exec = "sender";
         }
         send_benchmark($lib, $addr, $port, $iter, $threads, $nc, $mode, $exec, @fps_vals);
@@ -250,11 +246,7 @@ if ($role eq "send") {
         lat_recv($lib, $addr, $port);
     } elsif (!$nc) {
         if ($exec eq "default") {
-            if ($srtp) {
-                system "make $lib" . "_srtp_receiver";
-            } else {
-                system "make $lib" . "_receiver";
-            }
+            system "make $lib" . "_receiver";
             $exec = "receiver";
         }
         recv_benchmark($lib, $addr, $port, $iter, $threads, $exec, @fps_vals);
