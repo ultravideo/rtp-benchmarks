@@ -172,11 +172,11 @@ sub print_help {
 }
 
 GetOptions(
-    "lib|l=s"     => \(my $lib = ""),
+    "library|lib|l=s"     => \(my $lib = ""),
     "role|r=s"    => \(my $role = ""),
-    "addr|a=s"    => \(my $addr = ""),
+    "address|addr|a=s"    => \(my $addr = ""),
     "port|p=i"    => \(my $port = 0),
-    "iter|i=i"    => \(my $iter = 10),
+    "iterations|iter|i=i"    => \(my $iter = 10),
     "threads|t=i" => \(my $threads = 1),
     "start|s=f"   => \(my $start = 0),
     "end|e=f"     => \(my $end = 0),
