@@ -1,67 +1,34 @@
+#include "uvgrtp_util.hh"
+
 #include <uvgrtp/lib.hh>
 #include <uvgrtp/clock.hh>
+
 #include <cstring>
-#include <algorithm> 
-
-#define USE_SRTP
-#define USE_VVC
-
-
-#define KEY_SIZE   16
-#define SALT_SIZE  14
+#include <algorithm>
 
 extern void* get_mem(int argc, char** argv, size_t& len);
 
 std::atomic<int> nready(0);
 
-constexpr int SOURCE_PORT = 9880;
-constexpr int DESTINATION_PORT = 8880;
-
 void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
 {
-    size_t bytes_sent   = 0;
-    uint64_t chunk_size = 0;
-    uint64_t total_size = 0;
-    uint64_t diff       = 0;
-	uint64_t current    = 0;
-	uint64_t period     = (uint64_t)((1000 / (float)fps) * 1000);
-    rtp_error_t ret     = RTP_OK;
     std::string addr_("127.0.0.1");
 
-#ifdef USE_SRTP
-    int flags = RCE_SRTP | RCE_SRTP_KMNGMNT_USER;
-#else
-    int flags = 0;
-#endif // USE_SRTP
+    uvgrtp::context rtp_ctx;
+    uvgrtp::session* session = nullptr;
+    uvgrtp::media_stream* send = nullptr;
+    uint16_t send_port = SENDER_PORT + thread_num * 2;
+    uint16_t receive_port = RECEIVER_PORT + thread_num * 2;
 
-#ifdef USE_VVC
-    rtp_format_t fmt = RTP_FORMAT_H266;
-#else
-    rtp_format_t fmt = RTP_FORMAT_H265;
-#endif
+    intialize_uvgrtp(rtp_ctx, &session, &send, addr_, addr_, send_port, receive_port, false, false);
 
-    uvg_rtp::context rtp_ctx;
-
-    auto sess = rtp_ctx.create_session(addr_);
-    auto hevc = sess->create_stream(
-        SOURCE_PORT      + thread_num * 2, // every two ports just in case we decide to test RTCP later
-        DESTINATION_PORT + thread_num * 2,
-        fmt,
-        flags
-    );
-
-#ifdef USE_SRTP
-    uint8_t key[16] = { 0 };
-    uint8_t salt[14] = { 0 };
-
-    for (int i = 0; i < KEY_SIZE; ++i)
-        key[i] = i + 7;
-    for (int i = 0; i < SALT_SIZE; ++i)
-        key[i] = i + 13;
-
-    hevc->add_srtp_ctx(key, salt);
-#endif // USE_SRTP
-
+    size_t bytes_sent = 0;
+    uint64_t chunk_size = 0;
+    uint64_t total_size = 0;
+    uint64_t diff = 0;
+    uint64_t current = 0;
+    uint64_t period = (uint64_t)((1000 / (float)fps) * 1000);
+    rtp_error_t ret = RTP_OK;
 
     // start the sending test
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
@@ -73,7 +40,7 @@ void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
             offset     += sizeof(uint64_t);
             total_size += chunk_size;
 
-            if ((ret = hevc->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
+            if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
                 fprintf(stderr, "push_frame() failed!\n");
                 for (;;);
             }
@@ -91,7 +58,7 @@ void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
             current += 1;
         }
     }
-    rtp_ctx.destroy_session(sess);
+    
 
     auto end = std::chrono::high_resolution_clock::now();
     diff     = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -101,6 +68,8 @@ void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
         diff, diff / 1000
     );
 
+    cleanup_uvgrtp(rtp_ctx, session, send);
+
 end:
     nready++;
 }
@@ -109,7 +78,7 @@ int main(int argc, char **argv)
 {
     if (argc != 5) {
         fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps> <mode>\n", __FILE__);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     size_t len   = 0;
@@ -128,5 +97,8 @@ int main(int argc, char **argv)
         threads[i]->join();
         delete threads[i];
     }
+
     free(threads);
+
+    return EXIT_SUCCESS;
 }

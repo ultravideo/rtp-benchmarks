@@ -3,16 +3,20 @@
 #include <thread>
 #include <cstdlib>
 #include <cstring>
-#include <kvazaar.h>
+
 #include <stdint.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#include <sys/mman.h>
-#include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <assert.h>
+
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <kvazaar.h>
+
 
 int kvazaar_encode(char *input, char *output);
 
@@ -168,5 +172,5 @@ cleanup:
     fclose(inputFile);
     fclose(outputFile);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

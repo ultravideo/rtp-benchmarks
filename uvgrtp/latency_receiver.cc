@@ -1,36 +1,42 @@
+#include "uvgrtp_util.h"
+
 #include <uvgrtp/lib.hh>
 #include <uvgrtp/clock.hh>
+
 #include <cstring>
 #include <algorithm>
+
 
 size_t nframes = 0;
 
 void hook_receiver(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
-    auto hevc = (uvg_rtp::media_stream *)arg;
-    hevc->push_frame(frame->payload, frame->payload_len, 0);
+    // send the frame immediately back
+    uvg_rtp::media_stream receive = (uvg_rtp::media_stream *)arg;
+    receive->push_frame(frame->payload, frame->payload_len, 0);
     nframes++;
 }
 
 int receiver(void)
 {
-    uvg_rtp::context rtp_ctx;
-    std::string addr("10.21.25.200");
+    std::string addr("127.0.0.1");
 
-    auto sess = rtp_ctx.create_session(addr);
-    auto hevc = sess->create_stream(
-        8889,
-        8888,
-        RTP_FORMAT_HEVC,
-        RCE_SYSTEM_CALL_DISPATCHER
-    );
+    uvgrtp::context rtp_ctx;
+    uvgrtp::session* session = nullptr;
+    uvgrtp::media_stream* receive = nullptr;
+    uint16_t send_port = SENDER_PORT;
+    uint16_t receive_port = RECEIVER_PORT;
 
-    hevc->install_receive_hook(hevc, hook_receiver);
+    intialize_uvgrtp(rtp_ctx, &session, &receive, addr_, addr_, receive_port, send_port, false, false);
 
-    while (nframes != 602)
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    receive->install_receive_hook(receive, hook_receiver);
 
-    return 0;
+    while (nframes < EXPECTED_FRAMES)
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+
+    cleanup_uvgrtp(rtp_ctx, session, receive);
+
+    return EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv)
