@@ -9,7 +9,6 @@ uvgrtp_sender:
 uvgrtp_receiver:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lpthread -lcryptopp
 
-
 uvgrtp_latency_sender:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread
 

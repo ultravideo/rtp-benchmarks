@@ -202,6 +202,7 @@ GetOptions(
     "srtp"        => \(my $srtp = 0),
     "mode=s"      => \(my $mode = "best-effort"),
     "exec=s"      => \(my $exec = "default"),
+    "format=s"    => \(my format = "hevc"),
     "help"        => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
@@ -212,7 +213,8 @@ print_help() if $help or !$lib;
 print_help() if ((!$start or !$end) and !$fps) and !$lat;
 print_help() if not grep /$mode/, ("strict", "best-effort");
 
-die "not implemented\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
+die "library not supported\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
+die "format not supported\n" if !grep (/$format/, ("hevc", "vvc", "h265", "h266"));
 my @fps_vals = ();
 
 if (!$lat) {
