@@ -1,5 +1,7 @@
 # RTP Benchmarks
 
+NOTE: This repository is in an untested state. We are working to bring it to an easily usable form.
+
 This repository contains all benchmarking code related to the benchmark of uvgRTP against LIVE555 and FFmpeg.
 
 Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP (latency) senders and receivers.
