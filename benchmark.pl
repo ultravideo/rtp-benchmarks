@@ -46,6 +46,8 @@ sub mk_rsock {
 }
 
 sub send_benchmark {
+    print "Starting send benchmark\n";
+
     my ($lib, $addr, $port, $iter, $threads, $gen_recv, $mode, $e, @fps_vals) = @_;
     my ($socket, $remote, $data);
     my @execs = split ",", $e;
@@ -69,9 +71,12 @@ sub send_benchmark {
             }
         }
     }
+
+    print "Send benchmark finished\n";
 }
 
 sub recv_benchmark {
+    print "Receive benchmark\n";
     my ($lib, $addr, $port, $iter, $threads, $e, @fps_vals) = @_;
     my $socket = mk_rsock($addr, $port);
     my @execs = split ",", $e;
@@ -89,10 +94,14 @@ sub recv_benchmark {
             }
         }
     }
+
+    print "Receive benchmark finished\n";
 }
 
 # use netcat to capture the stream
 sub recv_generic {
+    print "Start netcat receiver\n";
+
     my ($lib, $addr, $port, $iter, $threads, @fps_vals) = @_;
     # my ($sfps, $efps) = clamp($start, $end);
     my $socket = mk_rsock($addr, $port);
@@ -125,9 +134,12 @@ sub recv_generic {
 
         $threads--;
     }
+
+    print "End netcat receiver\n";
 }
 
 sub lat_send {
+    print "Latency send benchmark\n";
     my ($lib, $addr, $port) = @_;
     my ($socket, $remote, $data);
 
@@ -138,9 +150,11 @@ sub lat_send {
         $remote->recv($data, 16);
         system ("./$lib/latency_sender >> $lib/results/latencies 2>&1");
     }
+    print "Latency send benchmark finished\n";
 }
 
 sub lat_recv {
+    print "Latency receive benchmark\n";
     my ($lib, $addr, $port) = @_;
     my $socket = mk_rsock($addr, $port);
 
@@ -149,6 +163,7 @@ sub lat_recv {
         system ("./$lib/latency_receiver 2>&1 >/dev/null");
         sleep 2;
     }
+    print "Latency receive benchmark finished\n";
 }
 
 # TODO explain every parameter
