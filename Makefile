@@ -3,25 +3,28 @@
 CXX = g++
 CXXFLAGS = -Wall -Wextra -O2 -std=c++11 -g
 
+test_file_creation:
+	$(CXX) $(CXXFLAGS) -o test_file_creation util/test_file_creation.cc -lkvazaar -lpthread 
+
 uvgrtp_sender:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread -lcryptopp 
+	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
 
 uvgrtp_receiver:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lpthread -lcryptopp
 
 uvgrtp_latency_sender:
-	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lkvazaar -lpthread
+	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lpthread
 
 uvgrtp_latency_receiver:
 	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc -luvgrtp -lpthread
 
 # ffmpeg_sender:
 # 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \
-# 		ffmpeg/sender.cc util/util.cc -lkvazaar `pkg-config --libs libavformat` -lpthread
+# 		ffmpeg/sender.cc util/util.cc `pkg-config --libs libavformat` -lpthread
 
 ffmpeg_sender:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \
-		ffmpeg/sender.cc util/util.cc -lavformat -lavcodec -lswscale -lz -lavutil -lkvazaar -lpthread 
+		ffmpeg/sender.cc util/util.cc -lavformat -lavcodec -lswscale -lz -lavutil  -lpthread 
 
 ffmpeg_receiver:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/receiver \
@@ -29,7 +32,7 @@ ffmpeg_receiver:
 
 ffmpeg_latency_sender:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/latency_sender \
-		ffmpeg/latency_sender.cc util/util.cc -lkvazaar  `pkg-config --libs libavformat` -lpthread
+		ffmpeg/latency_sender.cc util/util.cc  `pkg-config --libs libavformat` -lpthread
 
 ffmpeg_latency_receiver:
 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/latency_receiver \
@@ -41,7 +44,7 @@ live555_sender:
 		-I /usr/local/include/groupsock  \
 		-I /usr/local/include/BasicUsageEnvironment \
 		-I /usr/local/include/UsageEnvironment \
-		-lkvazaar -lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
+		-lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
 		-lUsageEnvironment -lcrypto -lssl
 
 live555_receiver:
@@ -59,7 +62,7 @@ live555_latency_sender:
 		-I /usr/local/include/groupsock  \
 		-I /usr/local/include/BasicUsageEnvironment \
 		-I /usr/local/include/UsageEnvironment \
-		-lkvazaar -lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
+		-lpthread -lliveMedia -lgroupsock -lBasicUsageEnvironment \
 		-lUsageEnvironment -lcrypto -lssl
 
 live555_latency_receiver:
@@ -74,4 +77,4 @@ live555_latency_receiver:
 clean:
 	rm -f uvgrtp/receiver uvgrtp/sender  uvgrtp/latency_sender uvgrtp/latency_receiver \
 		ffmpeg/receiver ffmpeg/sender ffmpeg/latency_sender ffmpeg/latency_receiver \
-		live555/receiver live555/sender live555/latency
+		live555/receiver live555/sender live555/latency test_file_creation
