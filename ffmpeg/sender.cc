@@ -21,7 +21,7 @@ extern void *get_mem(int argc, char **argv, size_t& len);
 
 std::atomic<int> nready(0);
 
-void thread_func(void *mem, size_t len, char *addr_, int thread_num, double fps, bool strict)
+void thread_func(void *mem, size_t len, char *addr_, int thread_num, double fps)
 {
     char addr[64] = { 0 };
     enum AVCodecID codec_id = AV_CODEC_ID_H265;
@@ -131,7 +131,7 @@ end:
 int main(int argc, char **argv)
 {
     if (argc != 5) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps> <mode>\n", __FILE__);
+        fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps>\n", __FILE__);
         return -1;
     }
 
@@ -142,11 +142,10 @@ int main(int argc, char **argv)
     size_t len   = 0;
     void *mem    = get_mem(0, NULL, len);
     int nthreads = atoi(argv[2]);
-    bool strict  = !strcmp(argv[4], "strict");
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
     for (int i = 0; i < nthreads; ++i)
-        threads[i] = new std::thread(thread_func, mem, len, argv[1], i * 2, atof(argv[3]), strict);
+        threads[i] = new std::thread(thread_func, mem, len, argv[1], i * 2, atof(argv[3]));
 
     while (nready.load() != nthreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(20));

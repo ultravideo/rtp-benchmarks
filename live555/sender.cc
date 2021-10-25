@@ -7,7 +7,7 @@
 int main(int argc, char **argv)
 {
     if (argc != 5) {
-        fprintf(stderr, "usage: ./%s <addr> <# of threads> <fps> <mode>\n", __FILE__);
+        fprintf(stderr, "usage: ./%s <addr> <# of threads> <fps>\n", __FILE__);
         return -1;
     }
 

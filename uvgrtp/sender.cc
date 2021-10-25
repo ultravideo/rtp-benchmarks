@@ -77,14 +77,13 @@ end:
 int main(int argc, char **argv)
 {
     if (argc != 5) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps> <mode>\n", __FILE__);
+        fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps> \n", __FILE__);
         return EXIT_FAILURE;
     }
 
     size_t len   = 0;
     void *mem    = get_mem(0, NULL, len);
     int nthreads = atoi(argv[2]);
-    bool strict  = !strcmp(argv[4], "strict"); // not used
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
     for (int i = 0; i < nthreads; ++i)

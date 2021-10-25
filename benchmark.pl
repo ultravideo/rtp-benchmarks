@@ -174,7 +174,6 @@ sub print_help {
     . "\t--addr <server address>\n"
     . "\t--port <server port>\n"
     . "\t--threads <# of threads>\n"
-    . "\t--mode <strict|best-effort>\n"
     . "\t--start <start fps>\n"
     . "\t--end <end fps>\n\n";
 
@@ -200,7 +199,6 @@ GetOptions(
     "fps=s"       => \(my $fps = ""),
     "latency"     => \(my $lat = 0),
     "srtp"        => \(my $srtp = 0),
-    "mode=s"      => \(my $mode = "best-effort"),
     "exec=s"      => \(my $exec = "default"),
     "format=s"    => \(my format = "hevc"),
     "help"        => \(my $help = 0)
