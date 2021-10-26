@@ -52,14 +52,19 @@ sub send_benchmark {
     my ($socket, $remote, $data);
     my @execs = split ",", $e;
 
+    print "Waiting for receiver to connect to our TCP socket\n";
+
     $socket = mk_ssock($raddr, $port);
     $remote = $socket->accept();
 
     my $result_directory = "./$lib/results";
+    print "Creating results folder in $result_directory\n";
 
     unless(-e $result_directory or mkdir $result_directory) {
         die "Unable to create $result_directory\n";
     }
+
+    print "Starting send benchmark\n";
 
     foreach (@execs) {
         my $exec = $_;
@@ -91,14 +96,19 @@ sub send_benchmark {
 sub recv_benchmark {
     print "Receive benchmark\n";
     my ($lib, $saddr, $raddr, $port, $iter, $threads, $e, $format, $srtp, @fps_vals) = @_;
+    
+    print "Connecting TCP socket of sender\n";
     my $socket = mk_rsock($raddr, $port);
     my @execs = split ",", $e;
 
     my $result_directory = "./$lib/results";
+    print "Creating results folder in $result_directory\n";
 
     unless(-e $result_directory or mkdir $result_directory) {
         die "Unable to create $result_directory\n";
     }
+
+    print "Starting receive benchmark\n";
 
     foreach (@execs) {
         my $exec = $_;
