@@ -70,8 +70,11 @@ sub send_benchmark {
         foreach ((1 .. $threads)) {
             my $thread = $_;
             foreach (@fps_vals) {
+
                 my $fps = $_;
                 my $logname = "send_results_$thread" . "threads_$fps". "fps_$iter" . "iter_$exec";
+
+                print "Starting to benchmark sending $fps fps\n";
 
                 for ((1 .. $iter)) {
                     $remote->recv($data, 16);
@@ -107,6 +110,7 @@ sub recv_benchmark {
         foreach ((1 .. $threads)) {
             my $thread = $_;
             foreach (@fps_vals) {
+                print "Starting to benchmark receiving $_ fps\n";
                 my $logname = "recv_results_$thread" . "threads_$_". "fps_$iter" . "iter_$exec";
                 for ((1 .. $iter)) {
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
