@@ -8,9 +8,14 @@
 constexpr int EXPECTED_FRAMES = 602;
 
 void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrtp::media_stream** mStream,
-    std::string remote_address, std::string local_address, uint16_t local_port, uint16_t remote_port, bool srtp, bool vvc)
+    std::string remote_address, std::string local_address, uint16_t local_port, uint16_t remote_port, bool srtp, bool vvc, bool bind)
 {
     int flags = 0;
+
+    if (!bind)
+    {
+        flags = flags | RCE_ONLY_SEND;
+    }
     if (srtp)
     {
         flags = flags | RCE_SRTP | RCE_SRTP_KMNGMNT_USER;
