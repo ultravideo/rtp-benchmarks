@@ -55,7 +55,7 @@ sub send_benchmark {
     $socket = mk_ssock($raddr, $port);
     $remote = $socket->accept();
 
-    my $result_directory = "$lib/results";
+    my $result_directory = "./$lib/results";
 
     unless(-e $result_directory or mkdir $result_directory) {
         die "Unable to create $result_directory\n";
@@ -94,7 +94,7 @@ sub recv_benchmark {
     my $socket = mk_rsock($raddr, $port);
     my @execs = split ",", $e;
 
-    my $result_directory = "$lib/results";
+    my $result_directory = "./$lib/results";
 
     unless(-e $result_directory or mkdir $result_directory) {
         die "Unable to create $result_directory\n";

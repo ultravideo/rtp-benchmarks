@@ -1,4 +1,4 @@
-#include "uvgrtp_util.h"
+#include "uvgrtp_util.hh"
 
 #include <uvgrtp/lib.hh>
 #include <uvgrtp/clock.hh>
@@ -15,6 +15,53 @@ struct thread_info {
 } *thread_info;
 
 std::atomic<int> nready(0);
+
+void hook(void* arg, uvg_rtp::frame::rtp_frame* frame);
+
+void receiver_thread(char* addr, int thread_num, std::string local_address, int local_port,
+    std::string remote_address, int remote_port, bool vvc, bool srtp);
+
+int main(int argc, char** argv)
+{
+    if (argc != 8) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <number of threads> <format> <srtp>\n", __FILE__);
+        return EXIT_FAILURE;
+    }
+
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+
+    int nthreads = atoi(argv[5]);
+    std::string format = argv[6];
+
+    bool vvc = false;
+    if (format == "vvc" || format == "h266")
+    {
+        vvc = true;
+    }
+    else if (format != "hevc" || format != "h265")
+    {
+        std::cerr << "Unsupported uvgRTP receiver format: " << format << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    bool srtp = false; // TODO
+
+    thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
+
+    for (int i = 0; i < nthreads; ++i)
+        new std::thread(receiver_thread, argv[1], i, local_address, local_port, remote_address, remote_port, vvc, srtp);
+
+
+    // TODO: use thread.join. Also delete threads
+    while (nready.load() != nthreads)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    return EXIT_SUCCESS;
+}
 
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
@@ -74,44 +121,3 @@ void receiver_thread(char* addr, int thread_num, std::string local_address, int 
     cleanup_uvgrtp(rtp_ctx, session, receive);
 }
 
-int main(int argc, char** argv)
-{
-    if (argc != 8) {
-        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
-            <number of threads> <format> <srtp>\n", __FILE__);
-        return EXIT_FAILURE;
-    }
-
-    std::string local_address = argv[1];
-    int local_port = atoi(argv[2]);
-    std::string remote_address = argv[3];
-    int remote_port = atoi(argv[4]);
-
-    int nthreads = atoi(argv[5]);
-    std::string format = argv[6];
-
-    bool vvc = false;
-    if (format == "vvc" || format == "h266")
-    {
-        vvc = true;
-    }
-    else if (format != "hevc" || format != "h265")
-    {
-        std::cerr << "Unsupported uvgRTP receiver format: " << format << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    bool srtp = false; // TODO
-
-    thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
-
-    for (int i = 0; i < nthreads; ++i)
-        new std::thread(receiver_thread, argv[1], i, local_address, remote_address, local_port, remote_port, vvc, srtp);
-
-
-    // TODO: use thread.join. Also delete threads
-    while (nready.load() != nthreads)
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    return EXIT_SUCCESS;
-}
