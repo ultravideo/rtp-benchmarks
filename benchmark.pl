@@ -55,8 +55,18 @@ sub send_benchmark {
     $socket = mk_ssock($raddr, $port);
     $remote = $socket->accept();
 
+    my $result_directory = "$lib/results";
+
+    unless(-e $result_directory or mkdir $result_directory) {
+        die "Unable to create $result_directory\n";
+    }
+
     foreach (@execs) {
         my $exec = $_;
+
+        unless(-e "./$lib/$exec") {
+            die "The executable ./$lib/$exec has not been created! \n";
+        }
         foreach ((1 .. $threads)) {
             my $thread = $_;
             foreach (@fps_vals) {
@@ -81,8 +91,19 @@ sub recv_benchmark {
     my $socket = mk_rsock($raddr, $port);
     my @execs = split ",", $e;
 
+    my $result_directory = "$lib/results";
+
+    unless(-e $result_directory or mkdir $result_directory) {
+        die "Unable to create $result_directory\n";
+    }
+
     foreach (@execs) {
         my $exec = $_;
+
+        unless(-e "./$lib/$exec") {
+            die "The executable ./$lib/$exec has not been created! \n";
+        }
+
         foreach ((1 .. $threads)) {
             my $thread = $_;
             foreach (@fps_vals) {
@@ -232,7 +253,7 @@ if (!$lat) {
     }
 }
 
-if ($role eq "send") {
+if ($role eq "send" or $role eq "sender") {
     if ($lat) {
         system "make $lib" . "_latency_sender";
         lat_send($lib, $raddr, $port);
@@ -243,7 +264,7 @@ if ($role eq "send") {
         }
         send_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
     }
-} elsif ($role eq "recv" ) {
+} elsif ($role eq "recv" or $role eq "receive" or $role eq "receiver") {
     if ($lat) {
         system "make $lib" . "_latency_receiver";
         lat_recv($lib, $saddr, $port);
