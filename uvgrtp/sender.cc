@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
+#include <iostream>
 
 extern void* get_mem(std::string filename, size_t& len);
 

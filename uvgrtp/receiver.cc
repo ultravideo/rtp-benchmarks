@@ -6,6 +6,7 @@
 #include <cstring>
 #include <algorithm>
 #include <string>
+#include <iostream>
 
 struct thread_info {
     size_t pkts;
