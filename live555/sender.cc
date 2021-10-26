@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     int fps = atoi(argv[6]);
     std::string format = argv[7];
 
-    if (format != "hevc" && format != h265)
+    if (format != "hevc" && format != "h265")
     {
         std::cerr << "Unsupported Live555 sender format: " << format << std::endl;
         return EXIT_FAILURE;

@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     {
         vvc = true;
     }
-    else if (format != "hevc" || format != "h265")
+    else if (format != "hevc" && format != "h265")
     {
         std::cerr << "Unsupported uvgRTP receiver format: " << format << std::endl;
         return EXIT_FAILURE;

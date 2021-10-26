@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     int nThreads = atoi(argv[5]);
     std::string format = argv[6];
 
-    if (format != "hevc" && format != h265)
+    if (format != "hevc" && format != "h265")
     {
         std::cerr << "Unsupported Live555 receiver format: " << format << std::endl;
         return EXIT_FAILURE;

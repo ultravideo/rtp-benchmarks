@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     int nthreads = atoi(argv[5]);
     std::string format = argv[6];
 
-    if (format != "hevc" && format != h265)
+    if (format != "hevc" && format != "h265")
     {
         std::cerr << "Unsupported FFmpeg receiver format: " << format << std::endl;
         return EXIT_FAILURE;

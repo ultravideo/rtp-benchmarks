@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     double fps = atof(argv[6]);
     std::string format = argv[7];
 
-    if (format != "hevc" && format != h265)
+    if (format != "hevc" && format != "h265")
     {
         std::cerr << "Unsupported FFmpeg sender format: " << format << std::endl;
         return EXIT_FAILURE;
