@@ -4,34 +4,49 @@
 #include "source.hh"
 #include "H265VideoStreamDiscreteFramer.hh"
 
+#include <cstdlib>
+
 int main(int argc, char **argv)
 {
-    if (argc != 5) {
-        fprintf(stderr, "usage: ./%s <addr> <# of threads> <fps>\n", __FILE__);
-        return -1;
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <number of threads> <fps> <format> <srtp> \n", __FILE__);
+        return EXIT_FAILURE;
     }
 
-    H265VideoStreamDiscreteFramer *framer;
-    H265FramedSource *framedSource;
-    TaskScheduler *scheduler;
-    UsageEnvironment *env;
-    RTPSink *videoSink;
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
 
-    scheduler = BasicTaskScheduler::createNew();
-    env = BasicUsageEnvironment::createNew(*scheduler);
+    int nThreads = atoi(argv[5]);
+    int fps = atoi(argv[6]);
+    std::string format = argv[7];
 
-    framedSource = H265FramedSource::createNew(*env, atoi(argv[3]));
-    framer = H265VideoStreamDiscreteFramer::createNew(*env, framedSource);
+    if (format != "hevc" && format != h265)
+    {
+        std::cerr << "Unsupported Live555 sender format: " << format << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    Port rtpPort(8888);
+    bool srtp = false; // TODO
+    
+    TaskScheduler *scheduler = BasicTaskScheduler::createNew();
+    UsageEnvironment *env = BasicUsageEnvironment::createNew(*scheduler);
+    H265FramedSource* framedSource = H265FramedSource::createNew(*env, remote_address.c_str());
+    H265VideoStreamDiscreteFramer* framer = H265VideoStreamDiscreteFramer::createNew(*env, framedSource);
+
+    Port rtpPort(remote_port);
     struct in_addr dst_addr;
-    dst_addr.s_addr = our_inet_addr("10.21.25.2");
+    dst_addr.s_addr = our_inet_addr(remote_address.c_str());
 
     Groupsock rtpGroupsock(*env, dst_addr, rtpPort, 255);
 
     OutPacketBuffer::maxSize = 40 * 1000 * 1000;
-    videoSink = H265VideoRTPSink::createNew(*env, &rtpGroupsock, 96);
 
+    RTPSink* videoSink = H265VideoRTPSink::createNew(*env, &rtpGroupsock, 96);
     videoSink->startPlaying(*framer, NULL, videoSink);
     env->taskScheduler().doEventLoop();
+
+    return EXIT_SUCCESS;
 }

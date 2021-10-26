@@ -1,8 +1,9 @@
+#include <RTPInterface.hh>
+#include "sink.hh"
+
 #include <chrono>
 #include <climits>
 #include <thread>
-#include <RTPInterface.hh>
-#include "sink.hh"
 
 #define BUFFER_SIZE 1600000
 
@@ -14,6 +15,8 @@ std::chrono::high_resolution_clock::time_point last;
 static void thread_func(void)
 {
     unsigned prev_frames = UINT_MAX;
+
+    // looks like the only purpose of this function is to print the results to the log
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));

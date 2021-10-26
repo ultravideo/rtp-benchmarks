@@ -5,9 +5,6 @@
 #define KEY_SIZE   16
 #define SALT_SIZE  14
 
-constexpr int SENDER_PORT = 8880;
-constexpr int RECEIVER_PORT = 9880;
-
 constexpr int EXPECTED_FRAMES = 602;
 
 void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrtp::media_stream** mStream,

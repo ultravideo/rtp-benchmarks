@@ -20,7 +20,7 @@ extern "C" {
 
 using namespace std::chrono;
 
-extern void *get_mem(int argc, char **argv, size_t& len);
+extern void* get_mem(std::string filename, size_t& len);
 
 #define WIDTH  3840
 #define HEIGHT 2160
@@ -251,7 +251,7 @@ static void receiver(ffmpeg_ctx *ctx)
 static int sender(void)
 {
     size_t len = 0;
-    void *mem  = get_mem(0, NULL, len);
+    void *mem  = get_mem("test_file.hevc", len);
 
     std::string addr("10.21.25.2");
     ffmpeg_ctx *ctx = init_ffmpeg(addr.c_str());

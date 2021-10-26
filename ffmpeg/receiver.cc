@@ -9,6 +9,10 @@ extern "C" {
 #include <cstdio>
 #include <chrono>
 #include <thread>
+#include <cstdlib>
+
+#define SETUP_FFMPEG_PARAMETERS
+
 
 struct thread_info {
     size_t pkts;
@@ -61,7 +65,7 @@ void thread_func(char *addr, int thread_num)
     snprintf(buf, sizeof(buf), "%d", 40 * 1000 * 1000);
     av_dict_set(&d, "buffer_size", buf, 32);
 
-#if 1
+#ifdef SETUP_FFMPEG_PARAMETERS
     snprintf(buf, sizeof(buf), "%d", 10000000);
     av_dict_set(&d, "max_delay", buf, 32);
 
@@ -162,12 +166,29 @@ void thread_func(char *addr, int thread_num)
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads>\n", __FILE__);
-        return -1;
+    if (argc != 8) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <number of threads> <format> <srtp>\n", __FILE__);
+        return EXIT_FAILURE;
     }
 
-    int nthreads = atoi(argv[2]);
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+
+    int nthreads = atoi(argv[5]);
+    std::string format = argv[6];
+
+    if (format != "hevc" && format != h265)
+    {
+        std::cerr << "Unsupported FFmpeg receiver format: " << format << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    bool srtp = false; // TODO
+
+
     thread_info  = (struct thread_info *)calloc(nthreads, sizeof(*thread_info));
 
     for (int i = 0; i < nthreads; ++i)
@@ -175,4 +196,6 @@ int main(int argc, char **argv)
 
     while (nready.load() != nthreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    return EXIT_SUCCESS;
 }

@@ -13,15 +13,17 @@ extern "C" {
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <cstdlib>
+#include <string>
 
-extern void *get_mem(int argc, char **argv, size_t& len);
+extern void* get_mem(std::string filename, size_t& len);
 
 #define WIDTH  3840
 #define HEIGHT 2160
 
 std::atomic<int> nready(0);
 
-void thread_func(void *mem, size_t len, char *addr_, int thread_num, double fps)
+void thread_func(void *mem, size_t len, std::string remote_address, uint16_t port, int thread_num, double fps)
 {
     char addr[64] = { 0 };
     enum AVCodecID codec_id = AV_CODEC_ID_H265;
@@ -57,7 +59,7 @@ void thread_func(void *mem, size_t len, char *addr_, int thread_num, double fps)
     AVOutputFormat* fmt = av_guess_format("rtp", NULL, NULL);
 
     /* snprintf(addr, 64, "rtp://10.21.25.2:%d", 8888 + thread_num); */
-    snprintf(addr, 64, "rtp://127.0.0.1:%d", 8888 + thread_num);
+    snprintf(addr, 64, "rtp://" + remote_address.c_str() + ": % d", port + thread_num*2);
     ret = avformat_alloc_output_context2(&avfctx, fmt, fmt->name, addr);
 
     avio_open(&avfctx->pb, avfctx->filename, AVIO_FLAG_WRITE);
@@ -130,22 +132,40 @@ end:
 
 int main(int argc, char **argv)
 {
-    if (argc != 5) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps>\n", __FILE__);
-        return -1;
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <number of threads> <fps> <format> <srtp> \n", __FILE__);
+        return EXIT_FAILURE;
     }
+
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+
+    int nThreads = atoi(argv[5]);
+    double fps = atof(argv[6]);
+    std::string format = argv[7];
+
+    if (format != "hevc" && format != h265)
+    {
+        std::cerr << "Unsupported FFmpeg sender format: " << format << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    bool srtp = false; // TODO
 
     avcodec_register_all();
     av_register_all();
     avformat_network_init();
 
     size_t len   = 0;
-    void *mem    = get_mem(0, NULL, len);
-    int nthreads = atoi(argv[2]);
+    void *mem    = get_mem("test_file.hevc", len);
+    int nthreads = atoi(argv[5]);
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
     for (int i = 0; i < nthreads; ++i)
-        threads[i] = new std::thread(thread_func, mem, len, argv[1], i * 2, atof(argv[3]));
+        threads[i] = new std::thread(thread_func, mem, len, remote_address, remote_port, i, fps);
 
     while (nready.load() != nthreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(20));

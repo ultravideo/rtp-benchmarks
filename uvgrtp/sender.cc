@@ -5,22 +5,79 @@
 
 #include <cstring>
 #include <algorithm>
+#include <cstdlib>
+#include <string>
 
-extern void* get_mem(int argc, char** argv, size_t& len);
+extern void* get_mem(std::string filename, size_t& len);
+
+void sender_thread(void* mem, size_t len, std::string local_address, uint16_t local_port,
+    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp);
 
 std::atomic<int> nready(0);
 
-void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
-{
-    std::string addr_("127.0.0.1");
 
+int main(int argc, char **argv)
+{
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <number of threads> <fps> <format> <srtp> \n", __FILE__);
+        return EXIT_FAILURE;
+    }
+
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+
+    int nThreads = atoi(argv[5]);
+    int fps = atoi(argv[6]);
+    std::string format = argv[7];
+
+    bool vvc = false;
+
+    if (format == "vvc" || format == "h266")
+    {
+        vvc = true;
+    }
+    else if (format != "hevc" || format != "h265")
+    {
+        std::cerr << "Unsupported uvgRTP sender format: " << format << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    bool srtp = false; // TODO
+
+    size_t len   = 0;
+    void *mem    = get_mem("test_file.hevc", len);
+    int nthreads = atoi(argv[2]);
+    std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
+
+    for (int i = 0; i < nthreads; ++i)
+        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, remote_address, remote_port, i, fps, vvc, srtp);
+
+    while (nready.load() != nthreads)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    for (int i = 0; i < nthreads; ++i) {
+        threads[i]->join();
+        delete threads[i];
+    }
+
+    free(threads);
+
+    return EXIT_SUCCESS;
+}
+
+void sender_thread(void* mem, size_t len, std::string local_address, uint16_t local_port,
+    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp)
+{
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
     uvgrtp::media_stream* send = nullptr;
-    uint16_t send_port = SENDER_PORT + thread_num * 2;
-    uint16_t receive_port = RECEIVER_PORT + thread_num * 2;
+    uint16_t thread_local_port = local_port + thread_num * 2;
+    uint16_t thread_remote_port = remote_port + thread_num * 2;
 
-    intialize_uvgrtp(rtp_ctx, &session, &send, addr_, addr_, send_port, receive_port, false, false);
+    intialize_uvgrtp(rtp_ctx, &session, &send, local_address, remote_address, thread_local_port, thread_remote_port, vvc, srtp);
 
     size_t bytes_sent = 0;
     uint64_t chunk_size = 0;
@@ -35,9 +92,9 @@ void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
 
     for (int rounds = 0; rounds < 1; ++rounds) {
         for (size_t offset = 0, k = 0; offset < len; ++k) {
-            memcpy(&chunk_size, (uint8_t *)mem + offset, sizeof(uint64_t));
+            memcpy(&chunk_size, (uint8_t*)mem + offset, sizeof(uint64_t));
 
-            offset     += sizeof(uint64_t);
+            offset += sizeof(uint64_t);
             total_size += chunk_size;
 
             if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
@@ -48,7 +105,7 @@ void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
             auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
                 std::chrono::high_resolution_clock::now() - start
                 ).count();
-            
+
             offset += chunk_size;
             bytes_sent += chunk_size;
 
@@ -58,10 +115,9 @@ void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
             current += 1;
         }
     }
-    
 
     auto end = std::chrono::high_resolution_clock::now();
-    diff     = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
     fprintf(stderr, "%lu bytes, %lu kB, %lu MB took %lu ms %lu s\n",
         bytes_sent, bytes_sent / 1000, bytes_sent / 1000 / 1000,
@@ -72,32 +128,4 @@ void thread_func(void* mem, size_t len, char* addr, int thread_num, double fps)
 
 end:
     nready++;
-}
-
-int main(int argc, char **argv)
-{
-    if (argc != 5) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps> \n", __FILE__);
-        return EXIT_FAILURE;
-    }
-
-    size_t len   = 0;
-    void *mem    = get_mem(0, NULL, len);
-    int nthreads = atoi(argv[2]);
-    std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
-
-    for (int i = 0; i < nthreads; ++i)
-        threads[i] = new std::thread(thread_func, mem, len, argv[1], i * 2, atof(argv[3]));
-
-    while (nready.load() != nthreads)
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-    for (int i = 0; i < nthreads; ++i) {
-        threads[i]->join();
-        delete threads[i];
-    }
-
-    free(threads);
-
-    return EXIT_SUCCESS;
 }

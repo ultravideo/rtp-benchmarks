@@ -8,8 +8,8 @@ use Getopt::Long;
 
 $| = 1; # autoflush
 
-my $DEFAULT_ADDR = "10.21.25.200";
-my $DEFAULT_PORT = 9999;
+my $DEFAULT_ADDR = "127.0.0.1";
+my $DEFAULT_PORT = 19500;
 
 sub clamp {
     my ($start, $end) = @_;
@@ -48,11 +48,11 @@ sub mk_rsock {
 sub send_benchmark {
     print "Starting send benchmark\n";
 
-    my ($lib, $addr, $port, $iter, $threads, $gen_recv, $mode, $e, @fps_vals) = @_;
+    my ($lib, $saddr, $raddr, $port, $iter, $threads, $gen_recv, $e, $format, $srtp, @fps_vals) = @_;
     my ($socket, $remote, $data);
     my @execs = split ",", $e;
 
-    $socket = mk_ssock($addr, $port);
+    $socket = mk_ssock($raddr, $port);
     $remote = $socket->accept();
 
     foreach (@execs) {
@@ -65,7 +65,7 @@ sub send_benchmark {
 
                 for ((1 .. $iter)) {
                     $remote->recv($data, 16);
-                    system ("time ./$lib/$exec $addr $thread $fps $mode >> $lib/results/$logname 2>&1");
+                    system ("time ./$lib/$exec $saddr $port $raddr $port $thread $fps $format $srtp >> $lib/results/$logname 2>&1");
                     $remote->send("end") if $gen_recv;
                 }
             }
@@ -77,8 +77,8 @@ sub send_benchmark {
 
 sub recv_benchmark {
     print "Receive benchmark\n";
-    my ($lib, $addr, $port, $iter, $threads, $e, @fps_vals) = @_;
-    my $socket = mk_rsock($addr, $port);
+    my ($lib, $saddr, $raddr, $port, $iter, $threads, $e, $format, $srtp, @fps_vals) = @_;
+    my $socket = mk_rsock($raddr, $port);
     my @execs = split ",", $e;
 
     foreach (@execs) {
@@ -88,8 +88,9 @@ sub recv_benchmark {
             foreach (@fps_vals) {
                 my $logname = "recv_results_$thread" . "threads_$_". "fps_$iter" . "iter_$exec";
                 for ((1 .. $iter)) {
-                    $socket->send("start");
-                    system ("time ./$lib/receiver $addr $thread >> $lib/results/$logname 2>&1");
+                    $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
+                    # please note that the local address for receiver is raddr
+                    system ("time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp >> $lib/results/$logname 2>&1");
                 }
             }
         }
@@ -187,32 +188,34 @@ sub print_help {
 
 GetOptions(
     "library|lib|l=s"     => \(my $lib = ""),
-    "role|r=s"    => \(my $role = ""),
-    "address|addr|a=s"    => \(my $addr = ""),
-    "port|p=i"    => \(my $port = 0),
-    "iterations|iter|i=i"    => \(my $iter = 10),
-    "threads|t=i" => \(my $threads = 1),
-    "start|s=f"   => \(my $start = 0),
-    "end|e=f"     => \(my $end = 0),
-    "step=i"      => \(my $step = 0),
-    "use-nc"      => \(my $nc = 0),
-    "fps=s"       => \(my $fps = ""),
-    "latency"     => \(my $lat = 0),
-    "srtp"        => \(my $srtp = 0),
-    "exec=s"      => \(my $exec = "default"),
-    "format=s"    => \(my format = "hevc"),
-    "help"        => \(my $help = 0)
+    "role|r=s"            => \(my $role = ""),
+    "sender_addr|saddr=s"    => \(my $saddr = ""),
+    "receiver_addr|raddr=s"  => \(my $raddr = ""),
+    "port|p=i"            => \(my $port = 0),
+    "iterations|iter|i=i" => \(my $iter = 10),
+    "threads|t=i"         => \(my $threads = 1),
+    "start|s=f"           => \(my $start = 0),
+    "end|e=f"             => \(my $end = 0),
+    "step=i"              => \(my $step = 0),
+    "use-nc|use-netcat"   => \(my $nc = 0),
+    "fps=s"               => \(my $fps = ""),
+    "latency"             => \(my $lat = 0),
+    "srtp"                => \(my $srtp = 0),
+    "exec=s"              => \(my $exec = "default"),
+    "format=s"            => \(my $format = "hevc"),
+    "help"                => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
 $port = $DEFAULT_PORT if !$port;
-$addr = $DEFAULT_ADDR if !$addr;
+$saddr = $DEFAULT_ADDR if !$saddr;
+$raddr = $DEFAULT_ADDR if !$raddr;
 
-print_help() if $help or !$lib;
 print_help() if ((!$start or !$end) and !$fps) and !$lat;
-print_help() if not grep /$mode/, ("strict", "best-effort");
 
 die "library not supported\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
-die "format not supported\n" if !grep (/$format/, ("hevc", "vvc", "h265", "h266"));
+die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266"));
+
+
 my @fps_vals = ();
 
 if (!$lat) {
@@ -232,26 +235,26 @@ if (!$lat) {
 if ($role eq "send") {
     if ($lat) {
         system "make $lib" . "_latency_sender";
-        lat_send($lib, $addr, $port);
+        lat_send($lib, $raddr, $port);
     } else {
         if ($exec eq "default") {
             system "make $lib" . "_sender";
             $exec = "sender";
         }
-        send_benchmark($lib, $addr, $port, $iter, $threads, $nc, $mode, $exec, @fps_vals);
+        send_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
     }
 } elsif ($role eq "recv" ) {
     if ($lat) {
         system "make $lib" . "_latency_receiver";
-        lat_recv($lib, $addr, $port);
+        lat_recv($lib, $saddr, $port);
     } elsif (!$nc) {
         if ($exec eq "default") {
             system "make $lib" . "_receiver";
             $exec = "receiver";
         }
-        recv_benchmark($lib, $addr, $port, $iter, $threads, $exec, @fps_vals);
+        recv_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $exec, $format, $srtp, @fps_vals);
     } else {
-        recv_generic($lib, $addr, $port, $iter, $threads, @fps_vals);
+        recv_generic($lib, $saddr, $port, $iter, $threads, @fps_vals);
     }
 } else {
     print "invalid role: '$role'\n" and exit;

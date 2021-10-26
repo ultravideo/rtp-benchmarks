@@ -5,11 +5,12 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <string>
 
 EventTriggerId H265FramedSource::eventTriggerId = 0;
 unsigned H265FramedSource::referenceCount       = 0;
 
-extern void *get_mem(int, char **, size_t&);
+extern void* get_mem(std::string filename, size_t& len);
 extern int get_next_frame_start(uint8_t *, uint32_t, uint32_t, uint8_t&);
 
 uint8_t *buf;
@@ -76,7 +77,7 @@ static std::pair<size_t, uint8_t *> find_next_nal(void)
     static uint8_t *nal_end   = NULL;
 
     if (!p) {
-        p   = (uint8_t *)get_mem(0, NULL, len);
+        p   = (uint8_t *)get_mem("test_file.hevc", len);
         end = p + len;
         len = 0;
 

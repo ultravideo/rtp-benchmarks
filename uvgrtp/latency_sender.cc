@@ -5,10 +5,11 @@
 
 #include <cstring>
 #include <algorithm>
+#include <string>
 
 constexpr float LATENCY_TEST_FPS = 30.0f;
 
-extern void *get_mem(int argc, char **argv, size_t& len);
+extern void* get_mem(std::string filename, size_t& len);
 
 std::chrono::high_resolution_clock::time_point start2;
 
@@ -61,7 +62,7 @@ static int sender(void)
     send->install_receive_hook(nullptr, hook_sender);
 
     size_t len = 0;
-    void* mem = get_mem(0, NULL, len);
+    void* mem = get_mem("test_file.hevc", len);
     uint64_t csize = 0;
     uint64_t diff = 0;
     uint64_t current = 0;

@@ -5,7 +5,7 @@
 
 #include <cstring>
 #include <algorithm>
-
+#include <string>
 
 struct thread_info {
     size_t pkts;
@@ -52,17 +52,18 @@ void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
     }
 }
 
-void thread_func(char* addr, int thread_num)
+void receiver_thread(char* addr, int thread_num, std::string local_address, int local_port, 
+    std::string remote_address, int remote_port, bool vvc, bool srtp)
 {
     std::string addr_("127.0.0.1");
 
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
     uvgrtp::media_stream* receive = nullptr;
-    uint16_t send_port = SENDER_PORT + thread_num * 2;
-    uint16_t receive_port = RECEIVER_PORT + thread_num * 2;
+    uint16_t thread_local_port = local_port + thread_num * 2;
+    uint16_t thread_remote_port = remote_port + thread_num * 2;
 
-    intialize_uvgrtp(rtp_ctx, &session, &receive, addr_, addr_, receive_port, send_port, false, false);
+    intialize_uvgrtp(rtp_ctx, &session, &receive, local_address, remote_address, thread_local_port, thread_remote_port, vvc, srtp);
 
     int tid = thread_num / 2;
     receive->install_receive_hook(&tid, hook);
@@ -75,17 +76,40 @@ void thread_func(char* addr, int thread_num)
 
 int main(int argc, char** argv)
 {
-    if (argc != 3) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads>\n", __FILE__);
+    if (argc != 8) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <number of threads> <format> <srtp>\n", __FILE__);
         return EXIT_FAILURE;
     }
 
-    int nthreads = atoi(argv[2]);
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+
+    int nthreads = atoi(argv[5]);
+    std::string format = argv[6];
+
+    bool vvc = false;
+    if (format == "vvc" || format == "h266")
+    {
+        vvc = true;
+    }
+    else if (format != "hevc" || format != "h265")
+    {
+        std::cerr << "Unsupported uvgRTP receiver format: " << format << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    bool srtp = false; // TODO
+
     thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
 
     for (int i = 0; i < nthreads; ++i)
-        new std::thread(thread_func, argv[1], i * 2);
+        new std::thread(receiver_thread, argv[1], i, local_address, remote_address, local_port, remote_port, vvc, srtp);
 
+
+    // TODO: use thread.join. Also delete threads
     while (nready.load() != nthreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 

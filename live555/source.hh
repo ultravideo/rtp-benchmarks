@@ -1,5 +1,4 @@
-#ifndef __h265_framed_source_h__
-#define __h265_framed_source_h__
+#pragma once
 
 #include <FramedSource.hh>
 
@@ -32,5 +31,3 @@ private:
   static unsigned referenceCount; // used to count how many instances of this class currently exist
   unsigned fps_;
 };
-
-#endif /* __h265_framed_source_h__ */
