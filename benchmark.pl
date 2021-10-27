@@ -126,7 +126,7 @@ sub recv_benchmark {
                     print "Starting to benchmark round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
-                    system ("time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp >> $lib/results/$logname 2>&1");
+                    system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2> $lib/results/$logname");
                 }
             }
         }
