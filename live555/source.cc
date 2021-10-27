@@ -1,3 +1,5 @@
+#include "../util/util.hh"
+
 #include <GroupsockHelper.hh>
 #include <FramedSource.hh>
 #include "source.hh"
@@ -10,8 +12,6 @@
 EventTriggerId H265FramedSource::eventTriggerId = 0;
 unsigned H265FramedSource::referenceCount       = 0;
 
-extern void* get_mem(std::string filename, size_t& len);
-extern int get_next_frame_start(uint8_t *, uint32_t, uint32_t, uint8_t&);
 
 uint8_t *buf;
 size_t offset    = 0;
@@ -68,7 +68,7 @@ const uint8_t *ff_avc_find_startcode(const uint8_t *p, const uint8_t *end)
     return out;
 }
 
-static std::pair<size_t, uint8_t *> find_next_nal(void)
+static std::pair<size_t, uint8_t *> find_next_nal(const std::string& input_file)
 {
     static size_t len         = 0;
     static uint8_t *p         = NULL;
@@ -77,7 +77,7 @@ static std::pair<size_t, uint8_t *> find_next_nal(void)
     static uint8_t *nal_end   = NULL;
 
     if (!p) {
-        p   = (uint8_t *)get_mem("test_file.hevc", len);
+        p   = (uint8_t *)get_mem(input_file, len);
         end = p + len;
         len = 0;
 
@@ -98,14 +98,18 @@ static std::pair<size_t, uint8_t *> find_next_nal(void)
     return ret;
 }
 
-H265FramedSource *H265FramedSource::createNew(UsageEnvironment& env, unsigned fps)
+H265FramedSource *H265FramedSource::createNew(UsageEnvironment& env, unsigned fps, 
+    std::string input_file, std::string result_file)
 {
-    return new H265FramedSource(env, fps);
+    return new H265FramedSource(env, fps, input_file, result_file);
 }
 
-H265FramedSource::H265FramedSource(UsageEnvironment& env, unsigned fps):
+H265FramedSource::H265FramedSource(UsageEnvironment& env, unsigned fps, 
+    std::string input_file, std::string result_file):
     FramedSource(env),
-    fps_(fps)
+    fps_(fps),
+    input_file_(input_file),
+    result_file_(result_file)
 {
     period = (uint64_t)((1000 / (float)fps) * 1000);
 
@@ -143,14 +147,11 @@ void H265FramedSource::deliverFrame()
 
     delivery_mtx.lock();
 
-    auto nal = find_next_nal();
+    auto nal = find_next_nal(input_file_);
 
     if (!nal.first || !nal.second) {
         uint64_t diff = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(e_tmr - s_tmr).count();
-        fprintf(stderr, "%lu bytes, %lu kB, %lu MB took %lu ms %lu s\n",
-            bytes, bytes / 1000, bytes / 1000 / 1000,
-            diff, diff / 1000
-        );
+        write_send_results_to_file(result_file_, bytes, diff);
         exit(EXIT_SUCCESS);
     }
 

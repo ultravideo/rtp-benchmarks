@@ -78,12 +78,13 @@ sub send_benchmark {
 
                 my $fps = $_;
                 my $logname = "send_results_$thread" . "threads_$fps". "fps_$iter" . "iter_$exec";
+                my $input_file = "test_file.hevc";
 
-                print "Starting to benchmark sending $fps fps\n";
+                print "Starting to benchmark sending $fps fps with $iter rounds\n";
 
                 for ((1 .. $iter)) {
                     $remote->recv($data, 16);
-                    system ("time ./$lib/$exec $saddr $port $raddr $port $thread $fps $format $srtp >> $lib/results/$logname 2>&1");
+                    system ("{time ./$lib/$exec $input_file $logname $saddr $port $raddr $port $thread $fps $format $srtp ;} 2> $lib/results/$logname");
                     $remote->send("end") if $gen_recv;
                 }
             }
@@ -97,7 +98,7 @@ sub recv_benchmark {
     print "Receive benchmark\n";
     my ($lib, $saddr, $raddr, $port, $iter, $threads, $e, $format, $srtp, @fps_vals) = @_;
     
-    print "Connecting TCP socket of sender\n";
+    print "Connecting to the TCP socket of the sender\n";
     my $socket = mk_rsock($raddr, $port);
     my @execs = split ",", $e;
 
@@ -224,8 +225,8 @@ sub print_help {
 GetOptions(
     "library|lib|l=s"     => \(my $lib = ""),
     "role|r=s"            => \(my $role = ""),
-    "sender_addr|saddr=s"    => \(my $saddr = ""),
-    "receiver_addr|raddr=s"  => \(my $raddr = ""),
+    "sender_addr|saddr=s"   => \(my $saddr = ""),
+    "receiver_addr|raddr=s" => \(my $raddr = ""),
     "port|p=i"            => \(my $port = 0),
     "iterations|iter|i=i" => \(my $iter = 10),
     "threads|t=i"         => \(my $threads = 1),

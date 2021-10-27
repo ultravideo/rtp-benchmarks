@@ -1,4 +1,5 @@
 #include "uvgrtp_util.hh"
+#include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
 #include <uvgrtp/clock.hh>
@@ -9,30 +10,32 @@
 #include <string>
 #include <iostream>
 
-extern void* get_mem(std::string filename, size_t& len);
-
 void sender_thread(void* mem, size_t len, std::string local_address, uint16_t local_port,
-    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp);
+    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, const std::string result_file);
 
 std::atomic<int> nready(0);
 
 
 int main(int argc, char **argv)
 {
-    if (argc != 9) {
-        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+    if (argc != 11) {
+        fprintf(stderr, "usage: ./%s <input file> <result file> <local address> <local port> <remote address> <remote port> \
             <number of threads> <fps> <format> <srtp> \n", __FILE__);
         return EXIT_FAILURE;
     }
 
-    std::string local_address = argv[1];
-    int local_port = atoi(argv[2]);
-    std::string remote_address = argv[3];
-    int remote_port = atoi(argv[4]);
+    std::string input_file = argv[1];
+    std::string result_file = argv[2];
 
-    int nThreads = atoi(argv[5]);
-    int fps = atoi(argv[6]);
-    std::string format = argv[7];
+    std::string local_address = argv[3];
+    int local_port = atoi(argv[4]);
+    std::string remote_address = argv[5];
+    int remote_port = atoi(argv[6]);
+
+    int nthreads = atoi(argv[7]);
+    int fps = atoi(argv[8]);
+    std::string format = argv[9];
+    std::string srtp = argv[10];
 
     bool vvc = false;
 
@@ -46,15 +49,19 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    bool srtp = false; // TODO
+    bool srtp_enabled = false;
+
+    if (srtp == "1" || srtp == "yes" || srtp == "y")
+    {
+        srtp_enabled = true;
+    }
 
     size_t len   = 0;
-    void *mem    = get_mem("test_file.hevc", len);
-    int nthreads = atoi(argv[2]);
+    void *mem    = get_mem(input_file, len);
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
     for (int i = 0; i < nthreads; ++i)
-        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, remote_address, remote_port, i, fps, vvc, srtp);
+        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, remote_address, remote_port, i, fps, vvc, srtp_enabled, result_file);
 
     while (nready.load() != nthreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -70,7 +77,7 @@ int main(int argc, char **argv)
 }
 
 void sender_thread(void* mem, size_t len, std::string local_address, uint16_t local_port,
-    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp)
+    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, const std::string result_file)
 {
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
@@ -120,13 +127,8 @@ void sender_thread(void* mem, size_t len, std::string local_address, uint16_t lo
     auto end = std::chrono::high_resolution_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-    fprintf(stderr, "%lu bytes, %lu kB, %lu MB took %lu ms %lu s\n",
-        bytes_sent, bytes_sent / 1000, bytes_sent / 1000 / 1000,
-        diff, diff / 1000
-    );
-
+    write_send_results_to_file(result_file, bytes_sent, diff);
     cleanup_uvgrtp(rtp_ctx, session, send);
 
-end:
     nready++;
 }

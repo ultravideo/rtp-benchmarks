@@ -1,3 +1,5 @@
+#include "util.hh"
+
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -6,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 
 #include <stdint.h>
 #include <unistd.h>
@@ -59,4 +62,15 @@ int get_next_frame_start(uint8_t *data, uint32_t offset, uint32_t data_len, uint
     }
 
     return -1;
+}
+
+
+void write_send_results_to_file(const std::string& filename, 
+    const size_t bytes, const uint64_t diff)
+{
+    std::ofstream result_file;
+    result_file.open(filename);
+    result_file << bytes << " bytes, " << bytes / 1000 << " kB, " << bytes / 1000000 << " MB took "
+        << diff << " ms " << diff / 1000 << " s" << std::endl;
+    result_file.close();
 }
