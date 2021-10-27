@@ -80,11 +80,10 @@ sub send_benchmark {
                 my $logname = "send_results_$thread" . "threads_$fps". "fps_$iter" . "iter_$exec";
                 my $input_file = "test_file.hevc";
 
-                print "Starting to benchmark sending $fps fps with $iter rounds\n";
-
                 for ((1 .. $iter)) {
+                    print "Starting to benchmark sending at $fps fps, round $_\n";
                     $remote->recv($data, 16);
-                    system ("{time ./$lib/$exec $input_file $logname $saddr $port $raddr $port $thread $fps $format $srtp ;} 2> $lib/results/$logname");
+                    system ("(time ./$lib/$exec $input_file $logname $saddr $port $raddr $port $thread $fps $format $srtp) 2> $lib/results/$logname");
                     $remote->send("end") if $gen_recv;
                 }
             }
@@ -121,9 +120,10 @@ sub recv_benchmark {
         foreach ((1 .. $threads)) {
             my $thread = $_;
             foreach (@fps_vals) {
-                print "Starting to benchmark receiving $_ fps\n";
+                print "Starting to benchmark receiving at $_ fps\n";
                 my $logname = "recv_results_$thread" . "threads_$_". "fps_$iter" . "iter_$exec";
                 for ((1 .. $iter)) {
+                    print "Starting to benchmark round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
                     system ("time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp >> $lib/results/$logname 2>&1");
