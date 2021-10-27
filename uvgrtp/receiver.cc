@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     std::string local_address = argv[1];
     int local_port = atoi(argv[2]);
     std::string remote_address = argv[3];
-    int remote_port = atoi(argv[4]);
+    int remote_port = atoi(argv[4]) + 200;
 
     int nthreads = atoi(argv[5]);
     std::string format = argv[6];
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
 
     // TODO: use thread.join. Also delete threads
-    while (nready.load() != nthreads)
+    while (nready.load() < nthreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     return EXIT_SUCCESS;
@@ -103,8 +103,6 @@ void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
 void receiver_thread(char* addr, int thread_num, std::string local_address, int local_port, 
     std::string remote_address, int remote_port, bool vvc, bool srtp)
 {
-    std::string addr_("127.0.0.1");
-
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
     uvgrtp::media_stream* receive = nullptr;
@@ -116,7 +114,7 @@ void receiver_thread(char* addr, int thread_num, std::string local_address, int 
     int tid = thread_num / 2;
     receive->install_receive_hook(&tid, hook);
 
-    for (;;)
+    while (nready)
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     cleanup_uvgrtp(rtp_ctx, session, receive);
