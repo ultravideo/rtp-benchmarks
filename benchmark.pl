@@ -83,7 +83,7 @@ sub send_benchmark {
                 for ((1 .. $iter)) {
                     print "Starting to benchmark sending at $fps fps, round $_\n";
                     $remote->recv($data, 16);
-                    system ("(time ./$lib/$exec $input_file $logname $saddr $port $raddr $port $thread $fps $format $srtp) 2> $lib/results/$logname");
+                    system ("(time ./$lib/$exec $input_file $logname $saddr $port $raddr $port $thread $fps $format $srtp) 2>> $lib/results/$logname");
                     $remote->send("end") if $gen_recv;
                 }
             }
@@ -126,7 +126,7 @@ sub recv_benchmark {
                     print "Starting to benchmark round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
-                    system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2> $lib/results/$logname");
+                    system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2>> $lib/results/$logname");
                 }
             }
         }

@@ -57,7 +57,8 @@ int main(int argc, char** argv)
     thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
 
     for (int i = 0; i < nthreads; ++i)
-        new std::thread(receiver_thread, argv[1], i, local_address, local_port, remote_address, remote_port, vvc, srtp);
+        new std::thread(receiver_thread, argv[1], i, local_address, local_port, 
+            remote_address, remote_port, vvc, srtp);
 
 
     // TODO: use thread.join. Also delete threads
@@ -66,6 +67,31 @@ int main(int argc, char** argv)
 
     return EXIT_SUCCESS;
 }
+
+void receiver_thread(char* addr, int thread_num, std::string local_address, int local_port,
+    std::string remote_address, int remote_port, bool vvc, bool srtp)
+{
+    uvgrtp::context rtp_ctx;
+    uvgrtp::session* session = nullptr;
+    uvgrtp::media_stream* receive = nullptr;
+    uint16_t thread_local_port = local_port + thread_num * 2;
+    uint16_t thread_remote_port = remote_port + thread_num * 2;
+
+    intialize_uvgrtp(rtp_ctx, &session, &receive, local_address, remote_address,
+        thread_local_port, thread_remote_port, vvc, srtp, true);
+
+    int tid = thread_num / 2;
+    receive->install_receive_hook(&tid, hook);
+
+    std::cout << "Installed hook to port: " << thread_local_port << std::endl;
+
+    while (nready)
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    cleanup_uvgrtp(rtp_ctx, session, receive);
+}
+
+
 
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
@@ -101,25 +127,5 @@ void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
         );
         nready++;
     }
-}
-
-void receiver_thread(char* addr, int thread_num, std::string local_address, int local_port, 
-    std::string remote_address, int remote_port, bool vvc, bool srtp)
-{
-    uvgrtp::context rtp_ctx;
-    uvgrtp::session* session = nullptr;
-    uvgrtp::media_stream* receive = nullptr;
-    uint16_t thread_local_port = local_port + thread_num * 2;
-    uint16_t thread_remote_port = remote_port + thread_num * 2;
-
-    intialize_uvgrtp(rtp_ctx, &session, &receive, local_address, remote_address, thread_local_port, thread_remote_port, vvc, srtp, true);
-
-    int tid = thread_num / 2;
-    receive->install_receive_hook(&tid, hook);
-
-    while (nready)
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-    cleanup_uvgrtp(rtp_ctx, session, receive);
 }
 

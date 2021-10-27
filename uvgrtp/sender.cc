@@ -61,8 +61,8 @@ int main(int argc, char **argv)
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
     for (int i = 0; i < nthreads; ++i) {
-        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, remote_address, remote_port,
-            i, fps, vvc, srtp_enabled, result_file);
+        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, 
+            remote_address, remote_port, i, fps, vvc, srtp_enabled, result_file);
     }
 
     for (int i = 0; i < nthreads; ++i) {
@@ -88,7 +88,8 @@ void sender_thread(void* mem, size_t len, std::string local_address, uint16_t lo
     uint16_t thread_local_port = local_port + thread_num * 2;
     uint16_t thread_remote_port = remote_port + thread_num * 2;
 
-    intialize_uvgrtp(rtp_ctx, &session, &send, local_address, remote_address, thread_local_port, thread_remote_port, vvc, srtp, false);
+    intialize_uvgrtp(rtp_ctx, &session, &send, local_address, remote_address, 
+        thread_local_port, thread_remote_port, vvc, srtp, false);
 
     size_t bytes_sent = 0;
     uint64_t chunk_size = 0;
