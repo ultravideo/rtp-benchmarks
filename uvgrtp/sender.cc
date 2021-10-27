@@ -25,7 +25,7 @@ int main(int argc, char **argv)
     std::string result_file = argv[2];
 
     std::string local_address = argv[3];
-    int local_port = atoi(argv[4]) + 200;
+    int local_port = atoi(argv[4]);
     std::string remote_address = argv[5];
     int remote_port = atoi(argv[6]);
 

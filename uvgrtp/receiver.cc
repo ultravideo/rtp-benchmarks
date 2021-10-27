@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     std::string local_address = argv[1];
     int local_port = atoi(argv[2]);
     std::string remote_address = argv[3];
-    int remote_port = atoi(argv[4]) + 200;
+    int remote_port = atoi(argv[4]);
 
     std::cout << "Starting uvgRTP receiver tests. " << local_address << ":" << local_port 
         << "<-" << remote_address << ":" << remote_port << std::endl;
