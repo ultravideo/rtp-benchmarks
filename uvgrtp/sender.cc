@@ -13,9 +13,6 @@
 void sender_thread(void* mem, size_t len, std::string local_address, uint16_t local_port,
     std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, const std::string result_file);
 
-std::atomic<int> nready(0);
-
-
 int main(int argc, char **argv)
 {
     if (argc != 11) {
@@ -60,15 +57,18 @@ int main(int argc, char **argv)
     void *mem    = get_mem(input_file, len);
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
-    for (int i = 0; i < nthreads; ++i)
-        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, remote_address, remote_port, i, fps, vvc, srtp_enabled, result_file);
-
-    while (nready.load() != nthreads)
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < nthreads; ++i) {
+        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, remote_address, remote_port,
+            i, fps, vvc, srtp_enabled, result_file);
+    }
 
     for (int i = 0; i < nthreads; ++i) {
-        threads[i]->join();
+        if (threads[i]->joinable())
+        {
+            threads[i]->join();
+        }
         delete threads[i];
+        threads[i] = nullptr;
     }
 
     free(threads);
@@ -98,30 +98,28 @@ void sender_thread(void* mem, size_t len, std::string local_address, uint16_t lo
     // start the sending test
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-    for (int rounds = 0; rounds < 1; ++rounds) {
-        for (size_t offset = 0, k = 0; offset < len; ++k) {
-            memcpy(&chunk_size, (uint8_t*)mem + offset, sizeof(uint64_t));
+    for (size_t offset = 0, k = 0; offset < len; ++k) {
+        memcpy(&chunk_size, (uint8_t*)mem + offset, sizeof(uint64_t));
 
-            offset += sizeof(uint64_t);
-            total_size += chunk_size;
+        offset += sizeof(uint64_t);
+        total_size += chunk_size;
 
-            if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
-                fprintf(stderr, "push_frame() failed!\n");
-                for (;;);
-            }
-
-            auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::high_resolution_clock::now() - start
-                ).count();
-
-            offset += chunk_size;
-            bytes_sent += chunk_size;
-
-            if (runtime < current * period)
-                std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
-
-            current += 1;
+        if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
+            fprintf(stderr, "push_frame() failed!\n");
+            for (;;);
         }
+
+        auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now() - start
+            ).count();
+
+        offset += chunk_size;
+        bytes_sent += chunk_size;
+
+        if (runtime < current * period)
+            std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
+
+        current += 1;
     }
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -129,6 +127,4 @@ void sender_thread(void* mem, size_t len, std::string local_address, uint16_t lo
 
     write_send_results_to_file(result_file, bytes_sent, diff);
     cleanup_uvgrtp(rtp_ctx, session, send);
-
-    nready++;
 }
