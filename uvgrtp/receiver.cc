@@ -77,7 +77,7 @@ void receiver_thread(char* addr, int thread_num, std::string local_address, int 
     uint16_t thread_local_port = local_port + thread_num * 2;
     uint16_t thread_remote_port = remote_port + thread_num * 2;
 
-    intialize_uvgrtp(rtp_ctx, &session, &receive, local_address, remote_address,
+    intialize_uvgrtp(rtp_ctx, &session, &receive, remote_address, local_address,
         thread_local_port, thread_remote_port, vvc, srtp, true);
 
     int tid = thread_num / 2;
