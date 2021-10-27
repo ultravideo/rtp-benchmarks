@@ -78,12 +78,20 @@ sub send_benchmark {
 
                 my $fps = $_;
                 my $logname = "send_results_$thread" . "threads_$fps". "fps_$iter" . "iter_$exec";
+
+                my $result_file = "$lib/results/$logname";
+
+                # remove result file if it exists
+                if(-e "./$result_file") {
+                    system("rm ./$result_file");
+                }
+
                 my $input_file = "test_file.hevc";
 
                 for ((1 .. $iter)) {
                     print "Starting to benchmark sending at $fps fps, round $_\n";
                     $remote->recv($data, 16);
-                    system ("(time ./$lib/$exec $input_file $logname $saddr $port $raddr $port $thread $fps $format $srtp) 2>> $lib/results/$logname");
+                    system ("(time ./$lib/$exec $input_file $result_file $saddr $port $raddr $port $thread $fps $format $srtp) 2>> $result_file");
                     $remote->send("end") if $gen_recv;
                 }
             }
@@ -122,11 +130,19 @@ sub recv_benchmark {
             foreach (@fps_vals) {
                 print "Starting to benchmark receiving at $_ fps\n";
                 my $logname = "recv_results_$thread" . "threads_$_". "fps_$iter" . "iter_$exec";
+
+                my $result_file = "$lib/results/$logname";
+
+                # remove result file if it exists
+                if(-e "./$result_file") {
+                    system("rm ./$result_file");
+                }
+
                 for ((1 .. $iter)) {
                     print "Starting to benchmark round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
-                    system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2>> $lib/results/$logname");
+                    system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
                 }
             }
         }
