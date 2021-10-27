@@ -54,7 +54,7 @@ sub send_benchmark {
 
     print "Waiting for receiver to connect to our TCP socket\n";
 
-    $socket = mk_ssock($raddr, $port);
+    $socket = mk_ssock($saddr, $port);
     $remote = $socket->accept();
 
     my $result_directory = "./$lib/results";
@@ -98,7 +98,7 @@ sub recv_benchmark {
     my ($lib, $saddr, $raddr, $port, $iter, $threads, $e, $format, $srtp, @fps_vals) = @_;
     
     print "Connecting to the TCP socket of the sender\n";
-    my $socket = mk_rsock($raddr, $port);
+    my $socket = mk_rsock($saddr, $port);
     my @execs = split ",", $e;
 
     my $result_directory = "./$lib/results";

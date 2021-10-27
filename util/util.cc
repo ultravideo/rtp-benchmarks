@@ -68,7 +68,8 @@ int get_next_frame_start(uint8_t *data, uint32_t offset, uint32_t data_len, uint
 void write_send_results_to_file(const std::string& filename, 
     const size_t bytes, const uint64_t diff)
 {
-    std::cout << "Writing send results into file. Bytes: " << bytes << " Diff:" << diff << std::endl;
+    std::cout << "Writing send results into file. File path: " << filename 
+        << " Bytes: " << bytes << " Diff: " << diff << std::endl;
 
     std::ofstream result_file;
     result_file.open(filename, std::ios::out | std::ios::app | std::ios::ate);
