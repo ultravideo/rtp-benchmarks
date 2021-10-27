@@ -142,6 +142,9 @@ int main(int argc, char **argv)
     std::string remote_address = argv[5];
     int remote_port = atoi(argv[6]);
 
+    std::cout << "Starting FFMpeg sender tests. " << local_address << ":" << local_port
+        << "->" << remote_address << ":" << remote_port << std::endl;
+
     int nthreads = atoi(argv[7]);
     int fps = atoi(argv[8]);
     std::string format = argv[9];
