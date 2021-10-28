@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <vector>
 
 struct thread_info {
     size_t pkts;
@@ -16,10 +17,11 @@ struct thread_info {
 } *thread_info;
 
 std::atomic<int> nready(0);
+std::atomic<int> frames_received(0);
 
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame);
 
-void receiver_thread(char* addr, int thread_num, std::string local_address, int local_port,
+void receiver_thread(char* addr, int thread_num, int nthreads, std::string local_address, int local_port,
     std::string remote_address, int remote_port, bool vvc, bool srtp);
 
 int main(int argc, char** argv)
@@ -56,19 +58,27 @@ int main(int argc, char** argv)
 
     thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
 
-    for (int i = 0; i < nthreads; ++i)
-        new std::thread(receiver_thread, argv[1], i, local_address, local_port, 
-            remote_address, remote_port, vvc, srtp);
+    std::vector<std::thread*> threads = {};
 
+    for (int i = 0; i < nthreads; ++i) {
+        threads.push_back(new std::thread(receiver_thread, argv[1], i, nthreads, local_address, local_port,
+            remote_address, remote_port, vvc, srtp));
+    }
 
-    // TODO: use thread.join. Also delete threads
-    while (nready.load() < nthreads)
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // wait all the thread executions to end and delete them
+    for (int i = 0; i < nthreads; ++i) {
+        if (threads[i]->joinable())
+        {
+            threads[i]->join();
+        }
+        delete threads[i];
+        threads[i] = nullptr;
+    }
 
     return EXIT_SUCCESS;
 }
 
-void receiver_thread(char* addr, int thread_num, std::string local_address, int local_port,
+void receiver_thread(char* addr, int thread_num, int nthreads, std::string local_address, int local_port,
     std::string remote_address, int remote_port, bool vvc, bool srtp)
 {
     uvgrtp::context rtp_ctx;
@@ -81,19 +91,32 @@ void receiver_thread(char* addr, int thread_num, std::string local_address, int 
         thread_local_port, thread_remote_port, vvc, srtp, true);
 
     int tid = thread_num / 2;
-    receive->install_receive_hook(&tid, hook);
+    size_t previous_packets = 0;
+    if (receive->install_receive_hook(&tid, hook) == RTP_OK)
+    {
+        std::cout << "Installed hook to port: " << thread_local_port << std::endl;
 
-    std::cout << "Installed hook to port: " << thread_local_port << std::endl;
+        while (nready.load() < nthreads) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    while (nready)
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            if (frames_received.load() <= previous_packets)
+            {
+                std::cerr << "uvgRTP receiver timed out. No packets received for 500 ms" << std::endl;
+                break;
+            }
+
+            previous_packets = frames_received.load();
+        }
+    }
+    else
+    {
+        std::cerr << "Failed to install receive hook. Aborting test" << std::endl;
+    }
 
     cleanup_uvgrtp(rtp_ctx, session, receive);
 }
 
-
-
-void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
+void hook(void* arg, uvgrtp::frame::rtp_frame* frame)
 {
     int tid = *(int*)arg;
 
@@ -110,16 +133,21 @@ void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
                 ).count()
         );
         nready++;
-        while (true)
+
+        while (true) {
+            std::cerr << "Receiver test failed!" << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
     }
 
     thread_info[tid].last = std::chrono::high_resolution_clock::now();
     thread_info[tid].bytes += frame->payload_len;
 
     (void)uvg_rtp::frame::dealloc_frame(frame);
+    ++thread_info[tid].pkts;
+    ++frames_received; // so we detect a possible timeout
 
-    if (++thread_info[tid].pkts == EXPECTED_FRAMES) {
+    if (thread_info[tid].pkts == EXPECTED_FRAMES) {
         fprintf(stderr, "%zu %zu %lu\n", thread_info[tid].bytes, thread_info[tid].pkts,
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 thread_info[tid].last - thread_info[tid].start
@@ -128,4 +156,3 @@ void hook(void* arg, uvg_rtp::frame::rtp_frame* frame)
         nready++;
     }
 }
-

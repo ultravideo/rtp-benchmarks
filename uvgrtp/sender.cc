@@ -110,7 +110,15 @@ void sender_thread(void* mem, size_t len, std::string local_address, uint16_t lo
 
         if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
             fprintf(stderr, "push_frame() failed!\n");
-            for (;;);
+            int rounds = 100;
+            while (rounds > 0) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                std::cerr << "Send test push failed!" << std::endl;
+                --rounds;
+            }
+
+            cleanup_uvgrtp(rtp_ctx, session, send);
+            return;
         }
 
         auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
