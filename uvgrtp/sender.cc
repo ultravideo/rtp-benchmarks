@@ -11,7 +11,8 @@
 #include <iostream>
 
 void sender_thread(void* mem, size_t len, std::string local_address, uint16_t local_port,
-    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, const std::string result_file);
+    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, 
+    const std::string result_file);
 
 int main(int argc, char **argv)
 {

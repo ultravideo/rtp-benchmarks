@@ -13,11 +13,11 @@ void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrt
     std::string remote_address, std::string local_address, uint16_t local_port, uint16_t remote_port, 
     bool srtp, bool vvc, bool bind)
 {
-    int flags = 0;
+    int flags = RCE_NO_SYSTEM_CALL_CLUSTERING; // this optimization can drop frames
 
     if (!bind)
     {
-        flags = flags | RCE_ONLY_SEND;
+        flags = flags | RCE_ONLY_SEND; // Don't bind to local address
     }
     if (srtp)
     {
