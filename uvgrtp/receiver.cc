@@ -97,11 +97,12 @@ void receiver_thread(char* addr, int thread_num, int nthreads, std::string local
         std::cout << "Installed hook to port: " << thread_local_port << std::endl;
 
         while (nready.load() < nthreads) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-            if (frames_received.load() <= previous_packets)
+            if (frames_received.load() == previous_packets)
             {
-                std::cerr << "uvgRTP receiver timed out. No packets received for 500 ms" << std::endl;
+                std::cerr << "uvgRTP receiver timed out. No packets received for 2 s. Received " 
+                    << thread_info[tid].pkts << " frames in total" << std::endl;
                 break;
             }
 
