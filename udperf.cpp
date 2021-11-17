@@ -192,7 +192,7 @@ int main(int argc, char **argv)
     int packet_size = 0;
     
     int rvalue = EXIT_FAILURE;
-    while ((c = getopt(argc, argv, "sa:")) != -1) {
+    while ((c = getopt(argc, argv, "c:s:p:i:")) != -1) {
         switch (c) {
             case 'c':
             {
@@ -230,9 +230,16 @@ int main(int argc, char **argv)
     {
         if (address == "")
         {
+            std::cerr << "Please provide address!" << std::endl;
             return EXIT_FAILURE;
         }
         rvalue = client(address, port, packet_size);
+    }
+
+    if (!run_server && !run_client)
+    {
+        std::cerr << "Please specify which end to run!" << std::endl;
+        return EXIT_FAILURE;
     }
     
     return rvalue;
