@@ -41,5 +41,10 @@ if (grep (/$role/, ("server", "s", "receive", "receiver", "recv"))) {
 }
 
 # run file creation
-system ("./udperf $role $address -p $port -i $size");
+my $exit_code = system ("./udperf $role $address -p $port -i $size");
+
+if($exit_code!=0)
+{
+  die "Failed to run network tester.\n";
+}
 

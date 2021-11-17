@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <string>
 
+#include <iostream>
+
 #ifndef MAX_ROUNDS
 #   define MAX_ROUNDS      10
 #endif
@@ -49,6 +51,7 @@ static int server(std::string address, uint16_t port, int packet_size)
     {
         if (!inet_pton(AF_INET, address.c_str(), &sa_u.sin_addr.s_addr))
         {
+            std::cerr << "Failed to set server UDP address" << std::endl;
             return EXIT_FAILURE;
         }
     }
@@ -73,6 +76,7 @@ static int server(std::string address, uint16_t port, int packet_size)
     {
         if (!inet_pton(AF_INET, address.c_str(), &sa_t.sin_addr.s_addr))
         {
+            std::cerr << "Failed to set server TCP address" << std::endl;
             return EXIT_FAILURE;
         }
     }
@@ -123,7 +127,11 @@ static int client(std::string address, uint16_t port, int packet_size)
     sa_u.sin_family = AF_INET;
     sa_u.sin_port   = htons(port);
 
-    (void)inet_pton(AF_INET, address.c_str(), &sa_u.sin_addr);
+    if (!inet_pton(AF_INET, address.c_str(), &sa_u.sin_addr))
+    {
+        std::cerr << "Failed to set client UDP address" << std::endl;
+        return EXIT_FAILURE;
+    }
     s_u = socket(AF_INET, SOCK_DGRAM, 0);
 
     /* initialize client tcp socket */
@@ -132,7 +140,12 @@ static int client(std::string address, uint16_t port, int packet_size)
     sa_t.sin_family = AF_INET;
     sa_t.sin_port   = htons(port + 1);
 
-    (void)inet_pton(AF_INET, address.c_str(), &sa_t.sin_addr);
+    if (!inet_pton(AF_INET, address.c_str(), &sa_t.sin_addr))
+    {
+        std::cerr << "Failed to set client TCP address" << std::endl;
+        return EXIT_FAILURE;
+    }
+
     s_t = socket(AF_INET, SOCK_STREAM, 0);
 
     (void)connect(s_t, (struct sockaddr *)&sa_t, sizeof(sa_t));
@@ -215,6 +228,10 @@ int main(int argc, char **argv)
     
     if (run_client)
     {
+        if (address == "")
+        {
+            return EXIT_FAILURE;
+        }
         rvalue = client(address, port, packet_size);
     }
     
