@@ -31,7 +31,7 @@ die "invalid role" if !grep (/$role/, ("server", "s", "client", "c", "a", "send"
 die "zero size not allowed" if ($size eq 0);
 
 # build network program
-system "g++ ./udperf.cpp -o udperf"; 
+system "g++ ./udperf.cc -o udperf"; 
 
 if (grep (/$role/, ("server", "s", "receive", "receiver", "recv"))) {
     $role = "-s";
