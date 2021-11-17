@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include <string>
 
 #ifndef MAX_ROUNDS
 #   define MAX_ROUNDS      10
@@ -122,7 +123,7 @@ static int client(std::string address, uint16_t port, int packet_size)
     sa_u.sin_family = AF_INET;
     sa_u.sin_port   = htons(port);
 
-    (void)inet_pton(AF_INET, server_addr, &sa_u.sin_addr);
+    (void)inet_pton(AF_INET, address.c_str(), &sa_u.sin_addr);
     s_u = socket(AF_INET, SOCK_DGRAM, 0);
 
     /* initialize client tcp socket */
@@ -131,7 +132,7 @@ static int client(std::string address, uint16_t port, int packet_size)
     sa_t.sin_family = AF_INET;
     sa_t.sin_port   = htons(port + 1);
 
-    (void)inet_pton(AF_INET, server_addr, &sa_t.sin_addr);
+    (void)inet_pton(AF_INET, address.c_str(), &sa_t.sin_addr);
     s_t = socket(AF_INET, SOCK_STREAM, 0);
 
     (void)connect(s_t, (struct sockaddr *)&sa_t, sizeof(sa_t));
@@ -173,8 +174,8 @@ int main(int argc, char **argv)
     
     std::string address = "";
     uint16_t port = 0;
-    bool client = false;
-    bool server = false;
+    bool run_client = false;
+    bool run_server = false;
     int packet_size = 0;
     
     int rvalue = EXIT_FAILURE;
@@ -183,13 +184,13 @@ int main(int argc, char **argv)
             case 'c':
             {
                 address = optarg;
-                client = true;
+                run_client = true;
                 break;
             }
             case 's':
             {
                 address = optarg;
-                server = true;
+                run_server = true;
                 break;
             }
             case 'p':
@@ -207,12 +208,12 @@ int main(int argc, char **argv)
         }
     }
     
-    if (server)
+    if (run_server)
     {
         rvalue = server(address, port, packet_size);
     }
     
-    if (client)
+    if (run_client)
     {
         rvalue = client(address, port, packet_size);
     }

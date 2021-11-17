@@ -33,10 +33,10 @@ die "zero size not allowed" if ($size eq 0);
 # build network program
 system "g++ ./udperf.cpp -o udperf"; 
 
-if !grep (/$role/, ("server", "s", "receive", "receiver", "recv")) {
+if (grep (/$role/, ("server", "s", "receive", "receiver", "recv"))) {
     $role = "-s";
 } else {
-    die "Sender needs an address to send to" if !address;
+    die "Sender needs an address to send to" if !$address;
     $role = "-c";
 }
 
