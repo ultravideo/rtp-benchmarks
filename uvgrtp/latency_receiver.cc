@@ -27,7 +27,7 @@ int receiver(void)
     uint16_t send_port = SENDER_PORT;
     uint16_t receive_port = RECEIVER_PORT;
 
-    intialize_uvgrtp(rtp_ctx, &session, &receive, addr_, addr_, receive_port, send_port, false, false);
+    intialize_uvgrtp(rtp_ctx, &session, &receive, addr_, addr_, receive_port, send_port, false);
 
     receive->install_receive_hook(receive, hook_receiver);
 

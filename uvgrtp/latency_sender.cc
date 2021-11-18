@@ -57,7 +57,7 @@ static int sender(void)
     uint16_t send_port = SENDER_PORT + thread_num * 2;
     uint16_t receive_port = RECEIVER_PORT + thread_num * 2;
 
-    intialize_uvgrtp(rtp_ctx, session, send, addr_, addr_, send_port, receive_port, false, false);
+    intialize_uvgrtp(rtp_ctx, session, send, addr_, addr_, send_port, receive_port, false);
 
     send->install_receive_hook(nullptr, hook_sender);
 
