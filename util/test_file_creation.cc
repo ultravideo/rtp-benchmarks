@@ -139,7 +139,7 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         if (chunks_out == NULL && img_in == NULL) {
             // We are done since there is no more input and output left.
             cleanup(inputFile, outputFile);
-            std::cout << "Finished creating the HEVC benchmark file" << std::endl;
+            std::cout << "Finished creating the HEVC benchmark file to " << output << std::endl;
             return EXIT_SUCCESS;
         }
 
@@ -164,7 +164,7 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         }
     }
 
-    std::cout << "Finished creating the HEVC benchmark file" << std::endl;
+    std::cout << "Finished creating the HEVC benchmark file to " << output << std::endl;
 
     cleanup(inputFile, outputFile);
 

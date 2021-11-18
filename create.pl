@@ -23,7 +23,7 @@ GetOptions(
     "quantization|qp=i"     => \(my $qp = 27),
 	"framerate|fps=i"       => \(my $fps = 30),
 	"intra-period|intra=i"  => \(my $period = 64),
-	"preset=s"              => \(my $preset = "medium"),
+	"preset|pre=s"          => \(my $preset = "medium"),
     "help"                  => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
@@ -44,5 +44,9 @@ my $height = $2;
 system "make test_file_creation"; 
 
  # run file creation
-system ("./test_file_creation $filename $width $height $qp $fps $period $preset");
+my $exit_code = system ("./test_file_creation $filename $width $height $qp $fps $period $preset");
 
+if($exit_code!=0)
+{
+  die "Failed to run file creator.\n";
+}
