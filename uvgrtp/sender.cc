@@ -59,6 +59,12 @@ int main(int argc, char **argv)
 
     size_t len   = 0;
     void *mem    = get_mem(input_file, len);
+
+    if (mem == nullptr)
+    {
+        return EXIT_FAILURE;
+    }
+
     std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
 
     for (int i = 0; i < nthreads; ++i) {

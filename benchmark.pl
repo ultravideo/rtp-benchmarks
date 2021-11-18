@@ -48,7 +48,7 @@ sub mk_rsock {
 sub send_benchmark {
     print "Starting send benchmark\n";
 
-    my ($lib, $saddr, $raddr, $port, $iter, $threads, $gen_recv, $e, $format, $srtp, @fps_vals) = @_;
+    my ($lib, $file, $saddr, $raddr, $port, $iter, $threads, $gen_recv, $e, $format, $srtp, @fps_vals) = @_;
     my ($socket, $remote, $data);
     my @execs = split ",", $e;
 
@@ -77,7 +77,7 @@ sub send_benchmark {
             foreach (@fps_vals) {
 
                 my $fps = $_;
-                my $logname = "send_results_$thread" . "threads_$fps". "fps_$iter" . "iter_$exec";
+                my $logname = "send_results__$format" . "_$thread" . "threads_$fps". "fps_$iter" . "_iter_$exec";
 
                 my $result_file = "$lib/results/$logname";
 
@@ -86,13 +86,13 @@ sub send_benchmark {
                     system("rm ./$result_file");
                 }
 
-                my $input_file = "test_file.hevc";
-
                 for ((1 .. $iter)) {
                     print "Starting to benchmark sending at $fps fps, round $_\n";
                     $remote->recv($data, 16);
-                    system ("(time ./$lib/$exec $input_file $result_file $saddr $port $raddr $port $thread $fps $format $srtp) 2>> $result_file");
+                    my $exit_code = system ("(time ./$lib/$exec $file $result_file $saddr $port $raddr $port $thread $fps $format $srtp) 2>> $result_file");
                     $remote->send("end") if $gen_recv;
+                    
+                    die "Sender failed! \n" if ($exit_code ne 0);
                 }
             }
         }
@@ -142,7 +142,8 @@ sub recv_benchmark {
                     print "Starting to benchmark round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
-                    system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
+                    my $exit_code = system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
+                    die "Receiver failed! \n" if ($exit_code ne 0);
                 }
             }
         }
@@ -193,7 +194,7 @@ sub recv_generic {
 
 sub lat_send {
     print "Latency send benchmark\n";
-    my ($lib, $addr, $port) = @_;
+    my ($lib, $file, $addr, $port) = @_;
     my ($socket, $remote, $data);
 
     $socket = mk_ssock($addr, $port);
@@ -222,13 +223,15 @@ sub lat_recv {
 # TODO explain every parameter
 sub print_help {
     print "usage (benchmark):\n  ./benchmark.pl \n"
-    . "\t--lib <uvgrtp|ffmpeg|live555>\n"
-    . "\t--role <send|recv>\n"
-    . "\t--addr <server address>\n"
-    . "\t--port <server port>\n"
+    . "\t--lib     <uvgrtp|ffmpeg|live555>\n"
+    . "\t--role    <send|recv>\n"
+    . "\t--file    <test filename>\n"
+    . "\t--saddr   <sender address>\n"
+    . "\t--raddr   <receiver address>\n"
+    . "\t--port    <server port>\n"
     . "\t--threads <# of threads>\n"
-    . "\t--start <start fps>\n"
-    . "\t--end <end fps>\n\n";
+    . "\t--start   <start fps>\n"
+    . "\t--end     <end fps>\n\n";
 
     print "usage (latency):\n  ./benchmark.pl \n"
     . "\t--latency\n"
@@ -239,23 +242,24 @@ sub print_help {
 }
 
 GetOptions(
-    "library|lib|l=s"     => \(my $lib = ""),
-    "role|r=s"            => \(my $role = ""),
-    "sender_addr|saddr=s"   => \(my $saddr = ""),
-    "receiver_addr|raddr=s" => \(my $raddr = ""),
-    "port|p=i"            => \(my $port = 0),
-    "iterations|iter|i=i" => \(my $iter = 10),
-    "threads|t=i"         => \(my $threads = 1),
-    "start|s=f"           => \(my $start = 0),
-    "end|e=f"             => \(my $end = 0),
-    "step=i"              => \(my $step = 0),
-    "use-nc|use-netcat"   => \(my $nc = 0),
-    "fps=s"               => \(my $fps = ""),
-    "latency"             => \(my $lat = 0),
-    "srtp"                => \(my $srtp = 0),
-    "exec=s"              => \(my $exec = "default"),
-    "format=s"            => \(my $format = "hevc"),
-    "help"                => \(my $help = 0)
+    "library|lib|l=s"            => \(my $lib = ""),
+    "role|r=s"                   => \(my $role = ""),
+    "sender_addr|saddr=s"        => \(my $saddr = ""),
+    "receiver_addr|raddr=s"      => \(my $raddr = ""),
+    "port|p=i"                   => \(my $port = 0),
+    "iterations|iter|i=i"        => \(my $iter = 10),
+    "input|filename|file|in=s"   => \(my $file = ""),
+    "threads|t=i"                => \(my $threads = 1),
+    "start|s=f"                  => \(my $start = 0),
+    "end|e=f"                    => \(my $end = 0),
+    "step=i"                     => \(my $step = 0),
+    "use-nc|use-netcat"          => \(my $nc = 0),
+    "framerates|fps=s"           => \(my $fps = ""),
+    "latency|lat"                => \(my $lat = 0),
+    "srtp"                       => \(my $srtp = 0),
+    "exec=s"                     => \(my $exec = "default"),
+    "format|form=s"              => \(my $format = ""),
+    "help"                       => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
 $port = $DEFAULT_PORT if !$port;
@@ -263,6 +267,9 @@ $saddr = $DEFAULT_ADDR if !$saddr;
 $raddr = $DEFAULT_ADDR if !$raddr;
 
 print_help() if ((!$start or !$end) and !$fps) and !$lat;
+die "Please specify library with --lib" if !$lib;
+die "Please specify role with --role" if !$role;
+
 
 die "library not supported\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
 die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266"));
@@ -285,17 +292,32 @@ if (!$lat) {
 }
 
 if ($role eq "send" or $role eq "sender") {
+    die "Please specify test file with --file for sender" if !$file;
+    
+    if (!$format)
+    {
+        # try to detect the format from file extension
+        $format = "hevc" if $file =~ /(.*\.hevc)/;
+        $format = "hevc" if $file =~ /(.*\.h265)/;
+        $format = "vvc" if $file =~ /(.*\.vvc)/;
+        $format = "vvc" if $file =~ /(.*\.h266)/;
+        
+        die "Could not determine test file format. Set file extension or specify with --format" if !$format;
+    }
+    
     if ($lat) {
         system "make $lib" . "_latency_sender";
-        lat_send($lib, $raddr, $port);
+        lat_send($lib, $file, $raddr, $port);
     } else {
         if ($exec eq "default") {
             system "make $lib" . "_sender";
             $exec = "sender";
         }
-        send_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
+        send_benchmark($lib, $file, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
     }
 } elsif ($role eq "recv" or $role eq "receive" or $role eq "receiver") {
+    die "Please specify test format with --format for receiver" if !$format;
+    
     if ($lat) {
         system "make $lib" . "_latency_receiver";
         lat_recv($lib, $saddr, $port);

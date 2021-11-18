@@ -71,13 +71,14 @@ The benchmarking can be done on wide variaty of different framerates. Individual
 
 In the following example, each thread configuration will test all FPS values between the range 30 - 480 and and each FPS is tested 20 times. Without the step variable, FPS is doubled so the tested values are: 30, 60, 120, 240, 480
 
-When running the tests, start the receiver first. Each FPS value for each thread configuration provides one log file.  The individual runs are synchronized using a separate TCP connection. You can find the sender results on the sender computer and the receiver results on the receiver computer.
+When running the tests, start the sender first and the start is synchronized when the receiver is started. Each FPS value for each thread configuration provides one log file.  The individual runs are synchronized using a separate TCP connection. You can find the sender results on the sender computer and the receiver results on the receiver computer.
 
 Goodput sender
 ```
 ./benchmark.pl \
    --lib uvgrtp \
    --role send \
+   --file filename.hevc \
    --saddr 127.0.0.1 \
    --raddr 127.0.0.1 \
    --port 9999 \

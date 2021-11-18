@@ -63,6 +63,12 @@ static int sender(void)
 
     size_t len = 0;
     void* mem = get_mem("test_file.hevc", len);
+
+    if (mem == nullptr)
+    {
+        return EXIT_FAILURE;
+    }
+
     uint64_t csize = 0;
     uint64_t diff = 0;
     uint64_t current = 0;
