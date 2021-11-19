@@ -21,7 +21,7 @@ std::atomic<int> frames_received(0);
 
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame);
 
-void receiver_thread(char* addr, int thread_num, int nthreads, std::string local_address, int local_port,
+void receiver_thread(int thread_num, int nthreads, std::string local_address, int local_port,
     std::string remote_address, int remote_port, bool vvc, bool srtp);
 
 int main(int argc, char** argv)
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     std::vector<std::thread*> threads = {};
 
     for (int i = 0; i < nthreads; ++i) {
-        threads.push_back(new std::thread(receiver_thread, argv[1], i, nthreads, local_address, local_port,
+        threads.push_back(new std::thread(receiver_thread, i, nthreads, local_address, local_port,
             remote_address, remote_port, vvc, srtp));
     }
 
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
-void receiver_thread(char* addr, int thread_num, int nthreads, std::string local_address, int local_port,
+void receiver_thread(int thread_num, int nthreads, std::string local_address, int local_port,
     std::string remote_address, int remote_port, bool vvc, bool srtp)
 {
     uvgrtp::context rtp_ctx;
@@ -91,7 +91,7 @@ void receiver_thread(char* addr, int thread_num, int nthreads, std::string local
         thread_local_port, thread_remote_port, vvc, srtp);
 
     int tid = thread_num / 2;
-    size_t previous_packets = 0;
+    int previous_packets = 0;
     if (receive->install_receive_hook(&tid, hook) == RTP_OK)
     {
         //std::cout << "Installed hook to port: " << thread_local_port << std::endl;

@@ -30,8 +30,7 @@ int main(int argc, char **argv)
     std::string remote_address = argv[5];
     int remote_port = atoi(argv[6]);
 
-    std::cout << "Starting uvgRTP sender tests. " << local_address << ":" << local_port
-        << "->" << remote_address << ":" << remote_port << std::endl;
+
 
     int nthreads = atoi(argv[7]);
     int fps = atoi(argv[8]);
@@ -56,6 +55,9 @@ int main(int argc, char **argv)
     {
         srtp_enabled = true;
     }
+
+    std::cout << "Starting uvgRTP sender tests. " << local_address << ":" << local_port
+        << "->" << remote_address << ":" << remote_port << std::endl;
 
     size_t len   = 0;
     void *mem    = get_mem(input_file, len);

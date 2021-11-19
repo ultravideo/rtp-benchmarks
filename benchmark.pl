@@ -58,13 +58,13 @@ sub send_benchmark {
     $remote = $socket->accept();
 
     my $result_directory = "./$lib/results";
-    print "Creating results folder in $result_directory\n";
+    print "Checking existance of results folder $result_directory\n";
 
     unless(-e $result_directory or mkdir $result_directory) {
         die "Unable to create $result_directory\n";
     }
 
-    print "Starting send benchmark\n";
+    print "Starting send benchmark for $lib\n";
 
     foreach (@execs) {
         my $exec = $_;
@@ -110,13 +110,13 @@ sub recv_benchmark {
     my @execs = split ",", $e;
 
     my $result_directory = "./$lib/results";
-    print "Creating results folder in $result_directory\n";
+    print "Checking existance of results folder $result_directory\n";
 
     unless(-e $result_directory or mkdir $result_directory) {
         die "Unable to create $result_directory\n";
     }
 
-    print "Starting receive benchmark\n";
+    print "Starting receive benchmark for $lib\n";
 
     foreach (@execs) {
         my $exec = $_;
@@ -128,7 +128,7 @@ sub recv_benchmark {
         foreach ((1 .. $threads)) {
             my $thread = $_;
             foreach (@fps_vals) {
-                print "Starting to benchmark receiving at $_ fps\n";
+                my $fps = $_;
                 my $logname = "recv_results_$thread" . "threads_$_". "fps_$iter" . "iter_$exec";
 
                 my $result_file = "$lib/results/$logname";
@@ -139,7 +139,7 @@ sub recv_benchmark {
                 }
 
                 for ((1 .. $iter)) {
-                    print "Starting to benchmark round $_\n";
+                    print "Starting to benchmark receive at $fps fps, round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
                     my $exit_code = system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
