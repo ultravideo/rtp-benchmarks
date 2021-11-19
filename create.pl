@@ -8,9 +8,9 @@ $| = 1; # autoflush
 
 sub print_help {
     print "usage (create):\n"  
-	. "./create.pl \n"
+    . "./create.pl \n"
     . "\t--input      <filename of YUV420 file>\n"
-	. "\t--res        <{width}x{height}>\n"
+    . "\t--res        <{width}x{height}>\n"
     . "\t--qp         <qp value>\n"
     . "\t--fps        <file framerate value>\n"
     . "\t--intra      <intra period>\n"
@@ -18,12 +18,12 @@ sub print_help {
 }
 
 GetOptions(
-	"input|i=s"             => \(my $filename = ""),
-	"resolution|res=s"      => \(my $resolution = ""),
-    "quantization|qp=i"     => \(my $qp = 27),
-	"framerate|fps=i"       => \(my $fps = 30),
-	"intra-period|intra=i"  => \(my $period = 64),
-	"preset|pre=s"          => \(my $preset = "medium"),
+    "input|i=s"             => \(my $filename = ""),
+    "resolution|res=s"      => \(my $resolution = ""),
+    "quantization|qp=i"     => \(my $qp = 32),
+    "framerate|fps=i"       => \(my $fps = 30),
+    "intra-period|intra=i"  => \(my $period = 64),
+    "preset|pre=s"          => \(my $preset = "ultrafast"),
     "help"                  => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
