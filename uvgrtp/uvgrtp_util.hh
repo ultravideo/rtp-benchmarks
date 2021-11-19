@@ -41,8 +41,9 @@ void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrt
     (*mStream)->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
     (*mStream)->configure_ctx(RCC_PKT_MAX_DELAY, 150);
 
-    std::cout << "Created a media_stream: " << local_address << ":" << local_port << "<->" 
-        << remote_address << ":" << remote_port << std::endl;
+
+    //std::cout << "Created a media_stream: " << local_address << ":" << local_port << "<->" 
+    //    << remote_address << ":" << remote_port << std::endl;
 
     if (srtp)
     {

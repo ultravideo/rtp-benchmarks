@@ -94,7 +94,7 @@ void receiver_thread(char* addr, int thread_num, int nthreads, std::string local
     size_t previous_packets = 0;
     if (receive->install_receive_hook(&tid, hook) == RTP_OK)
     {
-        std::cout << "Installed hook to port: " << thread_local_port << std::endl;
+        //std::cout << "Installed hook to port: " << thread_local_port << std::endl;
 
         while (nready.load() < nthreads) {
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
