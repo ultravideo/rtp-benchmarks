@@ -59,7 +59,8 @@ int main(int argc, char** argv)
 int kvazaar_encode(const std::string& input, const std::string& output, 
     int width, int height, int qp, int fps, int period, std::string& preset)
 {
-    std::cout << "Opening files. Input: " << input << " output: " << output << std::endl;
+    std::cout << "Opening files. Input: " << input << " Output: " << output << std::endl;
+    std::cout << "Parameters. Res: " << width << "x" << height << " fps: " << fps << " qp: " << qp << std::endl;
     FILE* inputFile = fopen(input.c_str(), "r");
     FILE* outputFile = fopen(output.c_str(), "w");
 
@@ -110,17 +111,17 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         kvz_frame_info info_out;
 
         if (!fread(img_in[inputCounter]->y, width * height, 1, inputFile)) {
-            std::cerr << "Cannot read y values" << std::endl;
+            std::cerr << "Cannot read y values from " << (width * height) << std::endl;
             done = true;
             continue;
         }
         if (!fread(img_in[inputCounter]->u, width * height >> 2, 1, inputFile)) {
-            std::cerr << "Cannot read u values" << std::endl;
+            std::cerr << "Cannot read u values from " << (width * height >> 2) << std::endl;
             done = true;
             continue;
         }
         if (!fread(img_in[inputCounter]->v, width * height >> 2, 1, inputFile)) {
-            std::cerr << "Cannot read v values" << std::endl;
+            std::cerr << "Cannot read v values from " << (width * height >> 2) << std::endl;
             done = true;
             continue;
         }
