@@ -31,6 +31,9 @@ static inline float diff_ms(struct timespec s, struct timespec e)
 
 static int server(std::string address, uint16_t port, int packet_size)
 {
+    std::cout << "Running receiver. Address: " << address << ":" << port
+        << " with packet size:" << packet_size << std::endl;
+
     int s_u = 0;
     int s_t = 0;
     int s_n = 0;
@@ -115,6 +118,9 @@ static int server(std::string address, uint16_t port, int packet_size)
 
 static int client(std::string address, uint16_t port, int packet_size)
 {
+    std::cout << "Running sender. Remote address: " << address << ":" << port
+        << " with packet size:" << packet_size << std::endl;
+
     float total = 0;
     struct timespec start, end;
     uint8_t data[packet_size] = { 0 };
