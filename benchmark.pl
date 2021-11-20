@@ -77,7 +77,11 @@ sub send_benchmark {
             foreach (@fps_vals) {
 
                 my $fps = $_;
-                my $logname = "send_results__$format" . "_$thread" . "threads_$fps". "fps_$iter" . "_iter_$exec";
+                my $logname = "send_$format" . "RTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                if ($srtp)
+                {
+                    $logname = "send_$format" . "SRTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                }
 
                 my $result_file = "$lib/results/$logname";
 
@@ -129,7 +133,11 @@ sub recv_benchmark {
             my $thread = $_;
             foreach (@fps_vals) {
                 my $fps = $_;
-                my $logname = "recv_results_$thread" . "threads_$_". "fps_$iter" . "iter_$exec";
+                        my $logname = "recv_$format" . "RTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                if ($srtp)
+                {
+                    $logname = "recv_$format" . "SRTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                }
 
                 my $result_file = "$lib/results/$logname";
 

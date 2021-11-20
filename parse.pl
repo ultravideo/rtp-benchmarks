@@ -191,7 +191,7 @@ sub parse_csv {
     opendir my $dir, realpath($path);
 
     foreach my $fh (grep /(recv|send)/, readdir $dir) {
-        ($threads, $ofps, $fiter) = ($fh =~ /(\d+)threads_(\d+)fps_(\d+)iter/g);
+        ($threads, $ofps, $fiter) = ($fh =~ /(\d+)threads_(\d+)fps_(\d+)rounds/g);
         $iter = $fiter if $fiter;
         print "unable to determine iter, skipping file $fh\n" and next if !$iter;
         $fps = sprintf("%05d", $ofps);
@@ -283,7 +283,7 @@ sub parse {
     opendir my $dir, realpath($path);
 
     foreach my $fh (grep /recv/, readdir $dir) {
-        ($threads, $fps, $fiter) = ($fh =~ /(\d+)threads_(\d+)fps_(\d+)iter/g);
+        ($threads, $fps, $fiter) = ($fh =~ /(\d+)threads_(\d+)fps_(\d+)rounds/g);
         $iter = $fiter if $fiter;
         print "unable to determine iter, skipping file $fh\n" and next if !$iter;
 
@@ -297,7 +297,7 @@ sub parse {
     rewinddir $dir;
 
     foreach my $fh (grep /send/, readdir $dir) {
-        ($threads, $fps, $fiter) = ($fh =~ /(\d+)threads_(\d+)fps_(\d+)iter/g);
+        ($threads, $fps, $fiter) = ($fh =~ /(\d+)threads_(\d+)fps_(\d+)rounds/g);
         $iter = $fiter if $fiter;
         print "unable to determine iter, skipping file $fh\n" and next if !$iter;
 
@@ -410,7 +410,7 @@ GetOptions(
 $lib     = $1 if (!$lib     and $path =~ m/.*(uvgrtp|ffmpeg|live555).*/i);
 $role    = $1 if (!$role    and $path =~ m/.*(recv|send).*/i);
 $threads = $1 if (!$threads and $path =~ m/.*_(\d+)threads.*/i);
-$iter    = $1 if (!$iter    and $path =~ m/.*_(\d+)iter.*/i);
+$iter    = $1 if (!$iter    and $path =~ m/.*_(\d+)rounds.*/i);
 
 print_help() if $help or (!$lib and $parse ne "latency");
 print_help() if !$iter and !$parse;
