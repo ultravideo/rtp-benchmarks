@@ -98,6 +98,7 @@ int kvazaar_encode(const std::string& input, const std::string& output,
 
     uint8_t inputCounter = 0;
     uint8_t outputCounter = 0;
+    int frame_count = 1;
     bool done = false;
     /* int r = 0; */
 
@@ -110,18 +111,21 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         uint32_t len_out = 0;
         kvz_frame_info info_out;
 
-        if (!fread(img_in[inputCounter]->y, width * height, 1, inputFile)) {
-            std::cerr << "Cannot read y values from " << (width * height) << std::endl;
+        std::cout << "Start encoding frame " << frame_count << std::endl;
+        ++frame_count;
+
+        if (fread(img_in[inputCounter]->y, width * height, 1, inputFile) == 0) {
+            std::cout << "Cannot read y values size " << (width * height) << std::endl;
             done = true;
             continue;
         }
-        if (!fread(img_in[inputCounter]->u, width * height >> 2, 1, inputFile)) {
-            std::cerr << "Cannot read u values from " << (width * height >> 2) << std::endl;
+        if (fread(img_in[inputCounter]->u, width * height >> 2, 1, inputFile) == 0) {
+            std::cout << "Cannot read u values size " << (width * height >> 2) << std::endl;
             done = true;
             continue;
         }
-        if (!fread(img_in[inputCounter]->v, width * height >> 2, 1, inputFile)) {
-            std::cerr << "Cannot read v values from " << (width * height >> 2) << std::endl;
+        if (fread(img_in[inputCounter]->v, width * height >> 2, 1, inputFile) == 0) {
+            std::cout << "Cannot read v values size " << (width * height >> 2) << std::endl;
             done = true;
             continue;
         }
