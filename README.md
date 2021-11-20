@@ -3,7 +3,7 @@
 This repository features the benchmarking of uvgRTP, FFMpeg and Live555 against each other.
 Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP (latency) senders and receivers. Currently, Linux is the only supported operating system.
 
-The benchmarking includes four phases: 1) Network settings, 2) file creation, 3) running the benchmarks and 4) parsing the results into a CSV file.
+The benchmarking includes four phases: 1) Network settings (network.pl), 2) file creation (create.pl), 3) running the benchmarks (benchmark.pl) and 4) parsing the results into a CSV file (parse.pl).
 
 ## Requirements
 
@@ -49,17 +49,26 @@ Only role and address for sender are required parameters, others have default va
 
 ## Phase 2: Creating the test file
 
-In order to run the benchmarking, a specially formatted file is needed. Currently, the test file can be  created by `create.pl` script.
+Currently, the benchmark has been hardcoded to use a file with specific resolution (3840x2160) and amount of frames. You can get the designated raw YUV420 file with the following command:
+
+```
+curl http://ultravideo.fi/video/Beauty_3840x2160_120fps_420_8bit_YUV_RAW.7z --output Beauty_4K.yuv.7z
+7za e Beauty_4K.yuv.7z
+```
+
+In order to run the benchmarking, a specially formatted file is needed. The test file can be created by `create.pl` script:
 
 ```
 ./create.pl \
-   --input filename.hevc \
+   --input Beauty_4K.yuv \
    --resolution 3840x2160 \
    --qp 27 \
    --framerate 120 \
    --intra-period 64 \
    --preset medium \
 ```
+
+`--input` is the only mandatory parameter.
 
 ## Phase 3: Running the benchmarks
 
