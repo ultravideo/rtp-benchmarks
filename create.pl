@@ -19,7 +19,7 @@ sub print_help {
 
 GetOptions(
     "input|i=s"             => \(my $filename = ""),
-    "resolution|res=s"      => \(my $resolution = ""),
+    "resolution|res=s"      => \(my $resolution = "3840x2160"),
     "quantization|qp=i"     => \(my $qp = 32),
     "framerate|fps=i"       => \(my $fps = 30),
     "intra-period|intra=i"  => \(my $period = 64),
@@ -31,7 +31,7 @@ print_help() if $help or !$filename or !$resolution;
 
 # check that parameters make sense
 die "" if $help;
-die "please specify input file and resolution!" if !$filename or !$resolution;
+die "please specify input file with --input" if !$filename;
 die "invalid preset" if !grep (/$preset/, ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"));
 
 die "check resolution format, for example: --res 3840x2160\n" if $resolution !~ /([\d]+)x([\d]+)/;
