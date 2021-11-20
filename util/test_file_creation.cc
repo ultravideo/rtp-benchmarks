@@ -110,14 +110,17 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         kvz_frame_info info_out;
 
         if (!fread(img_in[inputCounter]->y, width * height, 1, inputFile)) {
+            std::cerr << "Cannot read y values" << std::endl;
             done = true;
             continue;
         }
         if (!fread(img_in[inputCounter]->u, width * height >> 2, 1, inputFile)) {
+            std::cerr << "Cannot read u values" << std::endl;
             done = true;
             continue;
         }
         if (!fread(img_in[inputCounter]->v, width * height >> 2, 1, inputFile)) {
+            std::cerr << "Cannot read v values" << std::endl;
             done = true;
             continue;
         }
