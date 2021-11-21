@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <string>
 #include <iostream>
+#include <vector>
 
 void sender_thread(void* mem, size_t len, std::string local_address, uint16_t local_port,
     std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, 
@@ -22,18 +23,18 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    std::string input_file = argv[1];
+    std::string input_file  = argv[1];
     std::string result_file = argv[2];
 
     std::string local_address = argv[3];
-    int local_port = atoi(argv[4]);
+    int local_port            = atoi(argv[4]);
     std::string remote_address = argv[5];
-    int remote_port = atoi(argv[6]);
+    int remote_port            = atoi(argv[6]);
 
     int nthreads = atoi(argv[7]);
-    int fps = atoi(argv[8]);
+    int fps      = atoi(argv[8]);
     std::string format = argv[9];
-    std::string srtp = argv[10];
+    std::string srtp   = argv[10];
 
     bool vvc = false;
 
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
 
     bool srtp_enabled = false;
 
-    if (srtp == "1" || srtp == "yes" || srtp == "y")
+    if (srtp == "1" || srtp == "yes" || srtp == "y" || srtp == "srtp")
     {
         srtp_enabled = true;
     }
@@ -66,14 +67,14 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
+    std::vector<std::thread*> threads;
 
     for (int i = 0; i < nthreads; ++i) {
-        threads[i] = new std::thread(sender_thread, mem, len, local_address, local_port, 
-            remote_address, remote_port, i, fps, vvc, srtp_enabled, result_file);
+        threads.push_back(new std::thread(sender_thread, mem, len, local_address, local_port,
+            remote_address, remote_port, i, fps, vvc, srtp_enabled, result_file));
     }
 
-    for (int i = 0; i < nthreads; ++i) {
+    for (int i = 0; i < threads.size(); ++i) {
         if (threads[i]->joinable())
         {
             threads[i]->join();
@@ -82,7 +83,7 @@ int main(int argc, char **argv)
         threads[i] = nullptr;
     }
 
-    free(threads);
+    threads.clear();
 
     return EXIT_SUCCESS;
 }

@@ -37,7 +37,10 @@ void *get_mem(std::string filename, size_t& len)
 
     void *mem = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE, fd, 0);
 
-    madvise(mem, len, MADV_SEQUENTIAL | MADV_WILLNEED);
+    if (mem)
+    {
+        madvise(mem, len, MADV_SEQUENTIAL | MADV_WILLNEED);
+    }
 
     return mem;
 }
