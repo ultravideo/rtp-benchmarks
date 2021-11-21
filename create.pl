@@ -18,16 +18,16 @@ sub print_help {
 }
 
 GetOptions(
-    "input|i=s"             => \(my $filename = ""),
-    "resolution|res=s"      => \(my $resolution = "3840x2160"),
-    "quantization|qp=i"     => \(my $qp = 32),
-    "framerate|fps=i"       => \(my $fps = 30),
-    "intra-period|intra=i"  => \(my $period = 64),
-    "preset|pre=s"          => \(my $preset = "ultrafast"),
-    "help"                  => \(my $help = 0)
+    "input|file|filename|i=s" => \(my $filename = ""),
+    "resolution|res=s"        => \(my $resolution = "3840x2160"),
+    "quantization|qp=i"       => \(my $qp = 32),
+    "framerate|fps=i"         => \(my $fps = 30),
+    "intra-period|intra=i"    => \(my $period = 64),
+    "preset|pre=s"            => \(my $preset = "ultrafast"),
+    "help"                    => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
-print_help() if $help or !$filename or !$resolution;
+print_help() if $help or !$filename;
 
 # check that parameters make sense
 die "" if $help;
