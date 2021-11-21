@@ -136,7 +136,24 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         if (!inputFile.read((char*)img_in->y, width * height) ||
             !inputFile.read((char*)img_in->u, width * height/4) ||
             !inputFile.read((char*)img_in->v, width * height/4)) {
-            std::cout << "Cannot read more values from file" << std::endl;
+
+            if (inputFile.eof())
+            {
+                std::cout << "End of input file reached" << std::endl;
+            }
+            else if (inputFile.bad())
+            {
+                std::cerr << "Input bad" << std::endl;
+            }
+            else if (inputFile.fail())
+            {
+                std::cerr << "Input fails" << std::endl;
+            }
+            else
+            {
+                std::cerr << "Unknown Input error" << std::endl;
+            }
+
             input_has_been_read = true;
             inputFile.close();
             continue;
