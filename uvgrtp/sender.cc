@@ -30,8 +30,6 @@ int main(int argc, char **argv)
     std::string remote_address = argv[5];
     int remote_port = atoi(argv[6]);
 
-
-
     int nthreads = atoi(argv[7]);
     int fps = atoi(argv[8]);
     std::string format = argv[9];
@@ -64,6 +62,7 @@ int main(int argc, char **argv)
 
     if (mem == nullptr)
     {
+        std::cerr << "Failed to get file: " << input_file << std::endl;
         return EXIT_FAILURE;
     }
 
