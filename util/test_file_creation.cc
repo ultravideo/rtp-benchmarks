@@ -239,7 +239,7 @@ bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, co
 
         // write the size of the chunks into the file also. This makes the files unusable for normal
         // viewing. It would be better to write the sizes to a separate file
-        outputFile << written;
+        outputFile.write((char*)(&written), sizeof(uint64_t));
 
         // write the chunks into the file
         for (kvz_data_chunk* chunk = chunks_out; chunk != nullptr; chunk = chunk->next) {
