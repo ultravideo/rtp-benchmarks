@@ -67,6 +67,43 @@ int kvazaar_encode(const std::string& input, const std::string& output,
     std::ifstream inputFile (input,  std::ios::in  | std::ios::binary);
     std::ofstream outputFile(output, std::ios::out | std::ios::binary);
 
+    if (!inputFile.good())
+    {
+        if (inputFile.eof())
+        {
+            std::cerr << "Input eof before starting" << std::endl;
+        }
+        else if (inputFile.bad())
+        {
+            std::cerr << "Input bad before starting" << std::endl;
+        }
+        else if (inputFile.fail())
+        {
+            std::cerr << "Input fail before starting" << std::endl;
+        }
+
+        return EXIT_FAILURE;
+    }
+
+    if (!outputFile.good())
+    {
+        if (outputFile.eof())
+        {
+            std::cerr << "Output eof before starting" << std::endl;
+        }
+        else if (outputFile.bad())
+        {
+            std::cerr << "Output bad before starting" << std::endl;
+        }
+        else if (outputFile.fail())
+        {
+            std::cerr << "Output fail before starting" << std::endl;
+        }
+
+        return EXIT_FAILURE;
+    }
+
+
     kvz_encoder* enc = NULL;
     const kvz_api* api = kvz_api_get(8);
     kvz_config* config = api->config_alloc();
