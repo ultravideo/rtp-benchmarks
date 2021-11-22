@@ -22,21 +22,15 @@ sub open_file {
 }
 
 sub goodput {
-    if    ($_[2] eq "mbit") { return  8 * ($_[0] / 1000)        / $_[1]; }
-    elsif ($_[2] eq "mb")   { return      ($_[0] / 1000)        / $_[1]; }
+    if    ($_[2] eq "mbit" or $_[2] eq "Mbit") { return  8 * ($_[0] / 1000)        / $_[1]; }
+    elsif ($_[2] eq "mb"   or $_[2] eq "MB")   { return      ($_[0] / 1000)        / $_[1]; }
     else                    { return  8 * ($_[0] / 1000 / 1000) / $_[1]; }
 }
 
 sub convert_bytes_to_unit {
-    if    ($_[1] eq "mbit") { return  8 * ($_[0] / 1000 / 1000)        ; }
-    elsif ($_[1] eq "mb")   { return      ($_[0] / 1000 / 1000)        ; }
+    if    ($_[1] eq "mbit" or $_[1] eq "Mbit") { return  8 * ($_[0] / 1000 / 1000)        ; }
+    elsif ($_[1] eq "mb"   or $_[1] eq "MB")   { return      ($_[0] / 1000 / 1000)        ; }
     else                    { return  8 * ($_[0] / 1000 / 1000 / 1000) ; }
-}
-
-sub get_unit {
-    if    ($_[1] eq "mbit" or $_[1] eq "Mbit") { return ($_[0] / 1000 / 1000) / $_[1] * 8 * 1000; }
-    elsif ($_[1] eq "mb" or $_[1] eq "MB")   { return ($_[0] / 1000 / 1000) / $_[1] * 1000;     }
-    else                    { return ($_[0] / 1000 / 1000) / $_[1] * 8;        }
 }
 
 sub get_frame_count {
