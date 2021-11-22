@@ -8,7 +8,6 @@ use Cwd qw(realpath);
 my $TOTAL_FRAMES_UVGRTP  = 602;
 my $TOTAL_FRAMES_LIVE555 = 601;
 my $TOTAL_FRAMES_FFMPEG  = 598;
-my $TOTAL_BYTES          = 411410113;
 
 # open the file, validate it and return file handle to caller
 sub open_file {
@@ -46,7 +45,7 @@ sub get_frame_count {
 }
 
 sub parse_send {
-    my ($lib, $iter, $threads, $path, $unit) = @_;
+    my ($lib, $iter, $threads, $path, $unit, $filesize) = @_;
 
     my ($t_usr, $t_sys, $t_cpu, $t_total, $t_time);
     my ($t_sgp, $t_tgp, $fh);
@@ -95,18 +94,18 @@ sub parse_send {
         $t_sys   += $sys;
         $t_cpu   += $cpu;
         $t_total += $total;
-        $t_sgp   += goodput($TOTAL_BYTES, $rt_avg, $unit);
+        $t_sgp   += goodput($filesize, $rt_avg, $unit);
     }
 
     $t_sgp = $t_sgp / $iter;
-    $t_tgp = ($threads > 1) ? goodput($TOTAL_BYTES * $threads, $t_total / $iter, $unit) : $t_sgp;
+    $t_tgp = ($threads > 1) ? goodput($filesize * $threads, $t_total / $iter, $unit) : $t_sgp;
 
     close $fh;
     return ($path, $t_usr / $iter, $t_sys / $iter, $t_cpu / $iter / 100.0, $t_total / $iter, $t_sgp, $t_tgp);
 }
 
 sub parse_recv {
-    my ($lib, $iter, $threads, $path, $unit) = @_;
+    my ($lib, $iter, $threads, $path, $unit, $filesize) = @_;
     my ($t_usr, $t_sys, $t_cpu, $t_total, $tb_avg, $tf_avg, $tt_avg, $fh);
     my $tf = get_frame_count($lib);
 
@@ -160,9 +159,9 @@ sub parse_recv {
         $t_total += $total;
     }
 
-    my $bytes      = (($tb_avg  / $iter) / $TOTAL_BYTES);
+    my $bytes      = (($tb_avg  / $iter) / $filesize);
     my $frame_loss = 1.0 - (($tf_avg  / $iter) / $tf);
-    my $gp         = goodput(($TOTAL_BYTES * ($bytes), ($tt_avg  / $iter)), $unit);
+    my $gp         = goodput(($filesize * ($bytes), ($tt_avg  / $iter)), $unit);
 
     close $fh;
     return ($path, $t_usr / $iter, $t_sys / $iter, $t_cpu / $iter / 100.0, $t_total / $iter, $frame_loss, $bytes, $gp);
@@ -198,7 +197,7 @@ sub print_send {
 }
 
 sub parse_csv {
-    my ($lib, $iter, $path, $unit) = @_;
+    my ($lib, $iter, $path, $unit, $filesize) = @_;
     my ($threads, $fps, $ofps, $fiter, %result_ids) = (0) x 4;
     opendir my $dir, realpath($path);
     
@@ -213,13 +212,13 @@ sub parse_csv {
         my @values;
         
         # calculate send datarate for this fps
-        my $data_rate = $ofps*$TOTAL_BYTES/get_frame_count($lib);
+        my $data_rate = $ofps*$filesize/get_frame_count($lib);
         
         $data_rate = convert_bytes_to_unit($data_rate, $unit);
 
         if (grep /recv/, $filename) {
             $recv_present += 1;
-            @values = parse_recv($lib, $iter, $threads, realpath($path) . "/" . $filename, $unit);
+            @values = parse_recv($lib, $iter, $threads, realpath($path) . "/" . $filename, $unit, $filesize);
             shift @values; # removes first value?
 
             if (not exists $result_ids{"$threads $fps"}) {
@@ -230,7 +229,7 @@ sub parse_csv {
 
         } else {
             $send_present += 1;
-            @values = parse_send($lib, $iter, $threads, realpath($path) . "/" . $filename, $unit);
+            @values = parse_send($lib, $iter, $threads, realpath($path) . "/" . $filename, $unit, $filesize);
             shift @values; # removes first value?
 
             if (not exists $result_ids{"$threads $fps"}) {
@@ -319,7 +318,7 @@ sub parse_csv {
 }
 
 sub parse {
-    my ($lib, $iter, $path, $pkt_loss, $frame_loss, $type, $unit) = @_;
+    my ($lib, $iter, $path, $pkt_loss, $frame_loss, $type, $unit, $filesize) = @_;
     my ($tgp, $tgp_k, $sgp, $sgp_k, $threads, $fps, $fiter, %a) = (0) x 7;
     opendir my $dir, realpath($path);
 
@@ -328,7 +327,7 @@ sub parse {
         $iter = $fiter if $fiter;
         print "unable to determine iter, skipping file $fh\n" and next if !$iter;
 
-        my @values = parse_recv($lib, $iter, $threads, realpath($path) . "/" . $fh, $unit);
+        my @values = parse_recv($lib, $iter, $threads, realpath($path) . "/" . $fh, $unit, $filesize);
 
         if (100.0 - $values[5] <= $frame_loss and 100.0 - $values[6] <= $pkt_loss) {
             $a{"$threads $fps"} = $path;
@@ -342,7 +341,7 @@ sub parse {
         $iter = $fiter if $fiter;
         print "unable to determine iter, skipping file $fh\n" and next if !$iter;
 
-        my @values = parse_send($lib, $iter, $threads, realpath($path) . "/" . $fh, $unit);
+        my @values = parse_send($lib, $iter, $threads, realpath($path) . "/" . $fh, $unit, $filesize);
 
         if (exists $a{"$threads $fps"}) {
             if ($type eq "best") {
@@ -367,7 +366,7 @@ sub parse {
     if ($sgp_k) {
         print "best goodput, single thread: $sgp_k\n";
         ($threads, $fps) = ($sgp_k =~ /(\d+)threads_(\d+)/g);
-        print_send($lib, $iter, $threads, realpath($path) . "/" . $sgp_k, $unit);
+        print_send($lib, $iter, $threads, realpath($path) . "/" . $sgp_k, $unit, $filesize);
     } else {
         print "nothing found for single best goodput\n";
     }
@@ -375,7 +374,7 @@ sub parse {
     if ($tgp_k) {
         print "\nbest goodput, total: $tgp_k\n";
         ($threads, $fps) = ($tgp_k =~ /(\d+)threads_(\d+)/g);
-        print_send($lib, $iter, $threads, realpath($path) . "/" . $tgp_k, $unit);
+        print_send($lib, $iter, $threads, realpath($path) . "/" . $tgp_k, $unit, $filesize);
     } else {
         print "nothing found for total best goodput\n";
     }
@@ -418,6 +417,7 @@ sub print_help {
     . "\t--unit <mb|mbit|gbit> (defaults to mb)\n"
     . "\t--path <path to log file>\n"
     . "\t--iter <# of iterations>)\n"
+    . "\t--filesize <size of the test file in bytes>\n"
     . "\t--threads <# of threads used in the benchmark> (defaults to 1)\n\n";
 
     print "usage (latency):\n  ./parse.pl \n"
@@ -430,20 +430,22 @@ sub print_help {
     . "\t--lib <uvgrtp|ffmpeg|live555>\n"
     . "\t--iter <# of iterations>)\n"
     . "\t--unit <mb|mbit|gbit> (defaults to mb)\n"
+    . "\t--filesize <size of the test file in bytes>\n"
     . "\t--packet-loss <allowed percentage of dropped packets> (optional)\n"
     . "\t--frame-loss <allowed percentage of dropped frames> (optional)\n"
     . "\t--path <path to folder with send and recv output files>\n" and exit;
 }
 
 GetOptions(
-    "lib|l=s"         => \(my $lib = ""),
-    "role|r=s"        => \(my $role = ""),
-    "path|p=s"        => \(my $path = ""),
-    "threadst|=i"     => \(my $threads = 0),
-    "iter|i=i"        => \(my $iter = 0),
-    "parse|s=s"       => \(my $parse = ""),
-    "packet-loss|p=f" => \(my $pkt_loss = 100.0),
-    "frame-loss|f=f"  => \(my $frame_loss = 100.0),
+    "library|lib|l=s"              => \(my $lib = ""),
+    "role|r=s"                     => \(my $role = ""),
+    "path|dir|directory|p=s"       => \(my $path = ""),
+    "threadst|threads|=i"          => \(my $threads = 0),
+    "iter|iterations|rounds|i=i"   => \(my $iter = 0),
+    "fsize|size|filesize|fs|i=i"   => \(my $filesize = 0),
+    "parse|type|s=s"       => \(my $parse = ""),
+    "packet-loss|pl|p=f" => \(my $pkt_loss = 100.0),
+    "frame-loss|fl|f=f"  => \(my $frame_loss = 100.0),
     "unit=s"          => \(my $unit = "MB"),
     "help"            => \(my $help = 0)
 ) or die "failed to parse command line!\n";
@@ -460,16 +462,18 @@ print_help() if !grep /$unit/, ("mb", "MB", "mbit", "Mbit", "Gbit", "gbit");
 
 die "library not implemented\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
 
+die "please specify test file size from ls -l command with --filesize" if !$filesize and $parse ne "latency";
+
 if ($parse eq "best" or $parse eq "all") {
-    parse($lib, $iter, $path, $pkt_loss, $frame_loss, $parse, $unit);
+    parse($lib, $iter, $path, $pkt_loss, $frame_loss, $parse, $unit, $filesize);
 } elsif ($parse eq "csv") {
-    parse_csv($lib, $iter, $path, $unit);
+    parse_csv($lib, $iter, $path, $unit, $filesize);
 } elsif ($parse eq "latency") {
     parse_latency($lib, $iter, $path, $unit);
 } elsif ($role eq "send") {
-    print_send($lib, $iter, $threads, $path, $unit);
+    print_send($lib, $iter, $threads, $path, $unit, $filesize);
 } elsif ($role eq "recv") {
-    print_recv($lib, $iter, $threads, $path, $unit);
+    print_recv($lib, $iter, $threads, $path, $unit, $filesize);
 } else {
     die "unknown option!\n";
 }
