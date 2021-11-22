@@ -90,7 +90,7 @@ sub parse_send {
     $t_tgp = ($threads > 1) ? goodput($TOTAL_BYTES * $threads, $t_total / $iter, $unit) : $t_sgp;
 
     close $fh;
-    return ($path, $t_usr / $iter, $t_sys / $iter, $t_cpu / $iter, $t_total / $iter, $t_sgp, $t_tgp);
+    return ($path, $t_usr / $iter, $t_sys / $iter, $t_cpu / $iter / 100.0, $t_total / $iter, $t_sgp, $t_tgp);
 }
 
 sub parse_recv {
@@ -148,12 +148,12 @@ sub parse_recv {
         $t_total += $total;
     }
 
-    my $bytes  = 100 * (($tb_avg  / $iter) / $TOTAL_BYTES);
-    my $frames = 100 * (($tf_avg  / $iter) / $tf);
-    my $gp     = goodput(($TOTAL_BYTES * ($bytes / 100), ($tt_avg  / $iter)), $unit);
+    my $bytes      = (($tb_avg  / $iter) / $TOTAL_BYTES);
+    my $frame_loss = 1.0 - (($tf_avg  / $iter) / $tf);
+    my $gp         = goodput(($TOTAL_BYTES * ($bytes / 100), ($tt_avg  / $iter)), $unit);
 
     close $fh;
-    return ($path, $t_usr / $iter, $t_sys / $iter, $t_cpu / $iter, $t_total / $iter, $frames, $bytes, $gp);
+    return ($path, $t_usr / $iter, $t_sys / $iter, $t_cpu / $iter / 100.0, $t_total / $iter, $frame_loss, $bytes, $gp);
 }
 
 sub print_recv {
@@ -249,15 +249,15 @@ sub parse_csv {
                 print $output_file "send user time;"     . join(";", @send_usr)  . "\n";
                 print $output_file "send system time;"   . join(";", @send_sys)  . "\n";
                 print $output_file "send elapsed time;"  . join(";", @send_total)  . "\n";
-                print $output_file "send CPU usage;"     . join(";", @send_cpu/100)  . "\n";
+                print $output_file "send CPU usage;"     . join(";", @send_cpu)  . "\n";
                 print $output_file "send goodput;"       . join(";", @send_thread_goodput) . "\n";
                 print $output_file "total send goodput;" . join(";", @send_total_goodput) . "\n\n";
                 
                 print $output_file "recv user time;"     . join(";", @recv_usr)  . "\n";
                 print $output_file "recv system time;"   . join(";", @recv_sys)  . "\n";
                 print $output_file "recv elapsed time;"  . join(";", @recv_total)  . "\n";
-                print $output_file "recv CPU usage;"     . join(";", @recv_cpu/100)  . "\n";
-                print $output_file "Data loss;"          . join(";", 1.0 - @recv_frame/100)  . "\n";
+                print $output_file "recv CPU usage;"     . join(";", @recv_cpu)  . "\n";
+                print $output_file "frame loss;"          . join(";", @recv_frame)  . "\n";
                 print $output_file "bytes received;"     . join(";", @recv_bytes)  . "\n";
                 print $output_file "recv goodput;"       . join(";", @recv_goodput)  . "\n\n";
 
@@ -289,15 +289,15 @@ sub parse_csv {
     print $output_file "send user time;"     . join(";", @send_usr)  . "\n";
     print $output_file "send system time;"   . join(";", @send_sys)  . "\n";
     print $output_file "send elapsed time;"  . join(";", @send_total)  . "\n";
-    print $output_file "send CPU usage;"     . join(";", @send_cpu/100)  . "\n";
+    print $output_file "send CPU usage;"     . join(";", @send_cpu)  . "\n";
     print $output_file "send goodput;"       . join(";", @send_thread_goodput) . "\n";
     print $output_file "total send goodput;" . join(";", @send_total_goodput) . "\n\n";
     
     print $output_file "recv user time;"     . join(";", @recv_usr)  . "\n";
     print $output_file "recv system time;"   . join(";", @recv_sys)  . "\n";
     print $output_file "recv elapsed time;"  . join(";", @recv_total)  . "\n";
-    print $output_file "recv CPU usage;"     . join(";", @recv_cpu/100)  . "\n";
-    print $output_file "Data loss;"          . join(";", 1.0 - @recv_frame/100)  . "\n";
+    print $output_file "recv CPU usage;"     . join(";", @recv_cpu)  . "\n";
+    print $output_file "frame loss;"         . join(";", @recv_frame)  . "\n";
     print $output_file "bytes received;"     . join(";", @recv_bytes)  . "\n";
     print $output_file "recv goodput;"       . join(";", @recv_goodput)  . "\n\n";
 
