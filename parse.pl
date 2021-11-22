@@ -277,8 +277,11 @@ sub parse_csv {
 
             }
             
+            my $frame_count = get_frame_count($lib);
+            my $filesize_in_units = convert_bytes_to_unit($filesize, $unit);
+            
             # print the thread number on first line on the file
-            print $output_file "$threads_of_result threads;\n";
+            print $output_file "$threads_of_result threads;; File size ($unit); $filesize_in_units; Frame count; $frame_count;\n";
             $previous_threads = $threads_of_result;
             
             # reset variable values
