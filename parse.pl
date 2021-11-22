@@ -263,16 +263,16 @@ sub parse_csv {
                 print $output_file "send user time (s);"     . join(";", @send_usr)  . "\n";
                 print $output_file "send system time (s);"   . join(";", @send_sys)  . "\n";
                 print $output_file "send elapsed time (s);"  . join(";", @send_total)  . "\n";
-                print $output_file "send CPU usage;"     . join(";", @send_cpu)  . "\n";
+                print $output_file "send CPU usage (%);"     . join(";", @send_cpu)  . "\n";
                 print $output_file "send goodput ($unit);"       . join(";", @send_thread_goodput) . "\n";
                 print $output_file "total send goodput ($unit);" . join(";", @send_total_goodput) . "\n\n";
                 
                 print $output_file "recv user time (s);"     . join(";", @recv_usr)  . "\n";
                 print $output_file "recv system time (s);"   . join(";", @recv_sys)  . "\n";
                 print $output_file "recv elapsed time (s);"  . join(";", @recv_total)  . "\n";
-                print $output_file "recv CPU usage;"     . join(";", @recv_cpu)  . "\n";
-                print $output_file "frame loss;"          . join(";", @recv_frame)  . "\n";
-                print $output_file "bytes received;"     . join(";", @recv_bytes)  . "\n";
+                print $output_file "recv CPU usage (%);"     . join(";", @recv_cpu)  . "\n";
+                print $output_file "frame loss (%);"          . join(";", @recv_frame)  . "\n";
+                print $output_file "bytes received (%);"     . join(";", @recv_bytes)  . "\n";
                 print $output_file "recv goodput ($unit);"       . join(";", @recv_goodput)  . "\n\n";
 
 
@@ -303,16 +303,16 @@ sub parse_csv {
     print $output_file "send user time (s);"     . join(";", @send_usr)  . "\n";
     print $output_file "send system time (s);"   . join(";", @send_sys)  . "\n";
     print $output_file "send elapsed time (s);"  . join(";", @send_total)  . "\n";
-    print $output_file "send CPU usage;"     . join(";", @send_cpu)  . "\n";
+    print $output_file "send CPU usage (%);"     . join(";", @send_cpu)  . "\n";
     print $output_file "send goodput ($unit);"       . join(";", @send_thread_goodput) . "\n";
     print $output_file "total send goodput ($unit);" . join(";", @send_total_goodput) . "\n\n";
     
     print $output_file "recv user time (s);"     . join(";", @recv_usr)  . "\n";
     print $output_file "recv system time (s);"   . join(";", @recv_sys)  . "\n";
     print $output_file "recv elapsed time (s);" . join(";", @recv_total)  . "\n";
-    print $output_file "recv CPU usage;"     . join(";", @recv_cpu)  . "\n";
-    print $output_file "frame loss;"         . join(";", @recv_frame)  . "\n";
-    print $output_file "bytes received;"     . join(";", @recv_bytes)  . "\n";
+    print $output_file "recv CPU usage (%);"     . join(";", @recv_cpu)  . "\n";
+    print $output_file "frame loss (%);"         . join(";", @recv_frame)  . "\n";
+    print $output_file "bytes received (%);"     . join(";", @recv_bytes)  . "\n";
     print $output_file "recv goodput ($unit);"       . join(";", @recv_goodput)  . "\n\n";
 
     close $output_file;
