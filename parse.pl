@@ -199,9 +199,12 @@ sub parse_csv {
         print "unable to determine iter, skipping file $filename\n" and next if !$iter;
         $fps = sprintf("%05d", $ofps);
         my @values;
+        
+        # calculate send datarate for this fps
+        my $data_rate = $ofps*$TOTAL_BYTES/get_frame_count($lib);
 
         if (grep /recv/, $filename) {
-            $recv_present = 1;
+            $recv_present += 1;
             @values = parse_recv($lib, $iter, $threads, realpath($path) . "/" . $filename, $unit);
             shift @values; # removes first value?
 
@@ -212,26 +215,26 @@ sub parse_csv {
             }
 
         } else {
-            $send_present = 1;
+            $send_present += 1;
             @values = parse_send($lib, $iter, $threads, realpath($path) . "/" . $filename, $unit);
             shift @values; # removes first value?
 
             if (not exists $result_ids{"$threads $fps"}) {
-                $result_ids{"$threads $fps"} = join(" ", @values) . " $ofps";
+                $result_ids{"$threads $fps"} = join(" ", @values) . " $ofps" . " $data_rate";
             } else {
-                $result_ids{"$threads $fps"} = $result_ids{"$threads $fps"} . " " . join(" ", @values) . " $ofps";
+                $result_ids{"$threads $fps"} = $result_ids{"$threads $fps"} . " " . join(" ", @values) . " $ofps" . " $data_rate";
             }
         }
     }
     
-    die "Send and receive results are both not present!" if !$recv_present or !$send_present;
+    die "Different amounts of send and recv results!" if $recv_present ne $send_present;
 
     my $previous_threads = 0;
     open my $output_file, '>', "$lib.csv" or die "failed to open file: $lib.csv";
     
     # create empty variables
     my (@recv_usr, @recv_sys, @recv_cpu, @recv_total, @recv_frame, @recv_bytes, @recv_goodput) = () x 7;
-    my (@send_usr, @send_sys, @send_cpu, @send_total, @send_thread_goodput, @send_total_goodput, @send_fps) = () x 7;
+    my (@send_usr, @send_sys, @send_cpu, @send_total, @send_thread_goodput, @send_total_goodput, @send_fps, @datarate) = () x 8;
     
     foreach my $key (sort(keys %result_ids)) {
         my $threads_of_result = (split " ", $key)[0];
@@ -240,20 +243,25 @@ sub parse_csv {
             
             # print run results expect for one thread results which are printed later
             if ($threads_of_result ne 1) {
-                print $output_file "recv usr;"       . join(";", @recv_usr)  . "\n";
-                print $output_file "recv sys;"       . join(";", @recv_sys)  . "\n";
-                print $output_file "recv cpu;"       . join(";", @recv_cpu)  . "\n";
-                print $output_file "recv total;"     . join(";", @recv_total)  . "\n";
-                print $output_file "frames received;". join(";", @recv_frame)  . "\n";
-                print $output_file "bytes received;" . join(";", @recv_bytes)  . "\n";
-                print $output_file "recv goodput;"   . join(";", @recv_goodput)  . "\n";
+                print $output_file "fps;"            . join(";", @send_fps)  . "\n";
+                print $output_file "datarate;"       . join(";", @datarate)  . "\n\n";
+                
                 print $output_file "send usr;"       . join(";", @send_usr)  . "\n";
                 print $output_file "send sys;"       . join(";", @send_sys)  . "\n";
-                print $output_file "send cpu;"       . join(";", @send_cpu)  . "\n";
+                print $output_file "send cpu;"       . join(";", @send_cpu/100)  . "\n";
                 print $output_file "send total;"     . join(";", @send_total)  . "\n";
-                print $output_file "single goodput;" . join(";", @send_thread_goodput) . "\n";
-                print $output_file "total goodput;"  . join(";", @send_total_goodput) . "\n";
-                print $output_file "fps;"            . join(";", @send_fps)  . "\n\n";
+                print $output_file "send goodput;"   . join(";", @send_thread_goodput) . "\n";
+                print $output_file "total send goodput;"  . join(";", @send_total_goodput) . "\n\n";
+                
+                print $output_file "recv usr;"       . join(";", @recv_usr)  . "\n";
+                print $output_file "recv sys;"       . join(";", @recv_sys)  . "\n";
+                print $output_file "recv cpu;"       . join(";", @recv_cpu/100)  . "\n";
+                print $output_file "recv total;"     . join(";", @recv_total)  . "\n";
+                print $output_file "Frame loss;"     . join(";", 1.0 - @recv_frame)  . "\n";
+                print $output_file "bytes received;" . join(";", @recv_bytes)  . "\n";
+                print $output_file "recv goodput;"   . join(";", @recv_goodput)  . "\n\n";
+
+
             }
             
             # print the thread number on first line on the file
@@ -262,7 +270,7 @@ sub parse_csv {
             
             # reset variable values
             (@recv_usr, @recv_sys, @recv_cpu, @recv_total, @recv_frame, @recv_bytes, @recv_goodput) = () x 7;
-            (@send_usr, @send_sys, @send_cpu, @send_total, @send_thread_goodput, @send_total_goodput, @send_fps) = () x 7;
+            (@send_usr, @send_sys, @send_cpu, @send_total, @send_thread_goodput, @send_total_goodput, @send_fps, @datarate) = () x 8;
         }
         
         # set the values for printing
@@ -271,24 +279,27 @@ sub parse_csv {
         push @recv_total,         $comp[3];  push @recv_frame, $comp[4];  push @recv_bytes,          $comp[5];
         push @recv_goodput,       $comp[6];  push @send_usr,   $comp[7];  push @send_sys,            $comp[8];
         push @send_cpu,           $comp[9];  push @send_total, $comp[10]; push @send_thread_goodput, $comp[11];
-        push @send_total_goodput, $comp[12]; push @send_fps,   $comp[13];
+        push @send_total_goodput, $comp[12]; push @send_fps,   $comp[13]; push @datarate,            $comp[14];
     }
     
     # print values for one thread run
+    print $output_file "fps;"            . join(";", @send_fps)  . "\n";
+    print $output_file "datarate;"       . join(";", @datarate)  . "\n\n";
+    
+    print $output_file "send usr;"       . join(";", @send_usr)  . "\n";
+    print $output_file "send sys;"       . join(";", @send_sys)  . "\n";
+    print $output_file "send cpu;"       . join(";", @send_cpu/100)  . "\n";
+    print $output_file "send total;"     . join(";", @send_total)  . "\n";
+    print $output_file "send goodput;"   . join(";", @send_thread_goodput) . "\n";
+    print $output_file "send total goodput;"  . join(";", @send_total_goodput) . "\n\n";
+    
     print $output_file "recv usr;"       . join(";", @recv_usr)  . "\n";
     print $output_file "recv sys;"       . join(";", @recv_sys)  . "\n";
-    print $output_file "recv cpu;"       . join(";", @recv_cpu)  . "\n";
+    print $output_file "recv cpu;"       . join(";", @recv_cpu/100)  . "\n";
     print $output_file "recv total;"     . join(";", @recv_total)  . "\n";
     print $output_file "frames received;". join(";", @recv_frame)  . "\n";
     print $output_file "bytes received;" . join(";", @recv_bytes)  . "\n";
-    print $output_file "recv goodput;"   . join(";", @recv_goodput)  . "\n";
-    print $output_file "send usr;"       . join(";", @send_usr)  . "\n";
-    print $output_file "send sys;"       . join(";", @send_sys)  . "\n";
-    print $output_file "send cpu;"       . join(";", @send_cpu)  . "\n";
-    print $output_file "send total;"     . join(";", @send_total)  . "\n";
-    print $output_file "single goodput;" . join(";", @send_thread_goodput) . "\n";
-    print $output_file "total goodput;"  . join(";", @send_total_goodput) . "\n";
-    print $output_file "fps;"            . join(";", @send_fps)  . "\n";
+    print $output_file "recv goodput;"   . join(";", @recv_goodput)  . "\n\n";
 
     close $output_file;
 }
