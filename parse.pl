@@ -23,8 +23,20 @@ sub open_file {
 }
 
 sub goodput {
-    if    ($_[2] eq "mbit") { return ($_[0] / 1000 / 1000) / $_[1] * 8 * 1000; }
-    elsif ($_[2] eq "mb")   { return ($_[0] / 1000 / 1000) / $_[1] * 1000;     }
+    if    ($_[2] eq "mbit") { return  8 * ($_[0] / 1000)        / $_[1]; }
+    elsif ($_[2] eq "mb")   { return      ($_[0] / 1000)        / $_[1]; }
+    else                    { return  8 * ($_[0] / 1000 / 1000) / $_[1]; }
+}
+
+sub convert_bytes_to_unit {
+    if    ($_[1] eq "mbit") { return  8 * ($_[0] / 1000 / 1000)        ; }
+    elsif ($_[1] eq "mb")   { return      ($_[0] / 1000 / 1000)        ; }
+    else                    { return  8 * ($_[0] / 1000 / 1000 / 1000) ; }
+}
+
+sub get_unit {
+    if    ($_[1] eq "mbit" or $_[1] eq "Mbit") { return ($_[0] / 1000 / 1000) / $_[1] * 8 * 1000; }
+    elsif ($_[1] eq "mb" or $_[1] eq "MB")   { return ($_[0] / 1000 / 1000) / $_[1] * 1000;     }
     else                    { return ($_[0] / 1000 / 1000) / $_[1] * 8;        }
 }
 
@@ -150,7 +162,7 @@ sub parse_recv {
 
     my $bytes      = (($tb_avg  / $iter) / $TOTAL_BYTES);
     my $frame_loss = 1.0 - (($tf_avg  / $iter) / $tf);
-    my $gp         = goodput(($TOTAL_BYTES * ($bytes / 100), ($tt_avg  / $iter)), $unit);
+    my $gp         = goodput(($TOTAL_BYTES * ($bytes), ($tt_avg  / $iter)), $unit);
 
     close $fh;
     return ($path, $t_usr / $iter, $t_sys / $iter, $t_cpu / $iter / 100.0, $t_total / $iter, $frame_loss, $bytes, $gp);
@@ -202,6 +214,8 @@ sub parse_csv {
         
         # calculate send datarate for this fps
         my $data_rate = $ofps*$TOTAL_BYTES/get_frame_count($lib);
+        
+        $data_rate = convert_bytes_to_unit($data_rate, $unit);
 
         if (grep /recv/, $filename) {
             $recv_present += 1;
@@ -244,22 +258,22 @@ sub parse_csv {
             # print run results expect for one thread results which are printed later
             if ($threads_of_result ne 1) {
                 print $output_file "fps;"                . join(";", @send_fps)  . "\n";
-                print $output_file "datarate;"           . join(";", @datarate)  . "\n\n";
+                print $output_file "datarate ($unit);"   . join(";", @datarate)  . "\n\n";
                 
-                print $output_file "send user time;"     . join(";", @send_usr)  . "\n";
-                print $output_file "send system time;"   . join(";", @send_sys)  . "\n";
-                print $output_file "send elapsed time;"  . join(";", @send_total)  . "\n";
+                print $output_file "send user time (s);"     . join(";", @send_usr)  . "\n";
+                print $output_file "send system time (s);"   . join(";", @send_sys)  . "\n";
+                print $output_file "send elapsed time (s);"  . join(";", @send_total)  . "\n";
                 print $output_file "send CPU usage;"     . join(";", @send_cpu)  . "\n";
-                print $output_file "send goodput;"       . join(";", @send_thread_goodput) . "\n";
-                print $output_file "total send goodput;" . join(";", @send_total_goodput) . "\n\n";
+                print $output_file "send goodput ($unit);"       . join(";", @send_thread_goodput) . "\n";
+                print $output_file "total send goodput ($unit);" . join(";", @send_total_goodput) . "\n\n";
                 
-                print $output_file "recv user time;"     . join(";", @recv_usr)  . "\n";
-                print $output_file "recv system time;"   . join(";", @recv_sys)  . "\n";
-                print $output_file "recv elapsed time;"  . join(";", @recv_total)  . "\n";
+                print $output_file "recv user time (s);"     . join(";", @recv_usr)  . "\n";
+                print $output_file "recv system time (s);"   . join(";", @recv_sys)  . "\n";
+                print $output_file "recv elapsed time (s);"  . join(";", @recv_total)  . "\n";
                 print $output_file "recv CPU usage;"     . join(";", @recv_cpu)  . "\n";
                 print $output_file "frame loss;"          . join(";", @recv_frame)  . "\n";
                 print $output_file "bytes received;"     . join(";", @recv_bytes)  . "\n";
-                print $output_file "recv goodput;"       . join(";", @recv_goodput)  . "\n\n";
+                print $output_file "recv goodput ($unit);"       . join(";", @recv_goodput)  . "\n\n";
 
 
             }
@@ -284,22 +298,22 @@ sub parse_csv {
     
     # print values for one thread run
     print $output_file "fps;"                . join(";", @send_fps)  . "\n";
-    print $output_file "datarate;"           . join(";", @datarate)  . "\n\n";
+    print $output_file "datarate ($unit);"           . join(";", @datarate)  . "\n\n";
     
-    print $output_file "send user time;"     . join(";", @send_usr)  . "\n";
-    print $output_file "send system time;"   . join(";", @send_sys)  . "\n";
-    print $output_file "send elapsed time;"  . join(";", @send_total)  . "\n";
+    print $output_file "send user time (s);"     . join(";", @send_usr)  . "\n";
+    print $output_file "send system time (s);"   . join(";", @send_sys)  . "\n";
+    print $output_file "send elapsed time (s);"  . join(";", @send_total)  . "\n";
     print $output_file "send CPU usage;"     . join(";", @send_cpu)  . "\n";
-    print $output_file "send goodput;"       . join(";", @send_thread_goodput) . "\n";
-    print $output_file "total send goodput;" . join(";", @send_total_goodput) . "\n\n";
+    print $output_file "send goodput ($unit);"       . join(";", @send_thread_goodput) . "\n";
+    print $output_file "total send goodput ($unit);" . join(";", @send_total_goodput) . "\n\n";
     
-    print $output_file "recv user time;"     . join(";", @recv_usr)  . "\n";
-    print $output_file "recv system time;"   . join(";", @recv_sys)  . "\n";
-    print $output_file "recv elapsed time;"  . join(";", @recv_total)  . "\n";
+    print $output_file "recv user time (s);"     . join(";", @recv_usr)  . "\n";
+    print $output_file "recv system time (s);"   . join(";", @recv_sys)  . "\n";
+    print $output_file "recv elapsed time (s);" . join(";", @recv_total)  . "\n";
     print $output_file "recv CPU usage;"     . join(";", @recv_cpu)  . "\n";
     print $output_file "frame loss;"         . join(";", @recv_frame)  . "\n";
     print $output_file "bytes received;"     . join(";", @recv_bytes)  . "\n";
-    print $output_file "recv goodput;"       . join(";", @recv_goodput)  . "\n\n";
+    print $output_file "recv goodput ($unit);"       . join(";", @recv_goodput)  . "\n\n";
 
     close $output_file;
 }
@@ -430,7 +444,7 @@ GetOptions(
     "parse|s=s"       => \(my $parse = ""),
     "packet-loss|p=f" => \(my $pkt_loss = 100.0),
     "frame-loss|f=f"  => \(my $frame_loss = 100.0),
-    "unit=s"          => \(my $unit = "mb"),
+    "unit=s"          => \(my $unit = "MB"),
     "help"            => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
@@ -442,7 +456,7 @@ $iter    = $1 if (!$iter    and $path =~ m/.*_(\d+)rounds.*/i);
 print_help() if $help or (!$lib and $parse ne "latency");
 print_help() if !$iter and !$parse;
 print_help() if !$parse and (!$role or !$threads);
-print_help() if !grep /$unit/, ("mb", "mbit", "gbit");
+print_help() if !grep /$unit/, ("mb", "MB", "mbit", "Mbit", "Gbit", "gbit");
 
 die "library not implemented\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
 
