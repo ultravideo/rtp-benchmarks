@@ -9,10 +9,11 @@
 #include <stdlib.h>
 
 
-int kvazaar_encode(const std::string& input, const std::string& output, 
+int kvazaar_encode(const std::string& input, const std::string& output, const std::string& memory_filename,
     int width, int height, int qp, int fps, int period, std::string& preset);
 
-bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, const kvz_api* api, kvz_encoder* enc);
+bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, std::ofstream& memoryFile,
+    const kvz_api* api, kvz_encoder* enc);
 void cleanup_kvazaar(kvz_picture* input, const kvz_api* api, kvz_encoder* enc, kvz_config* config);
 
 int main(int argc, char** argv)
@@ -24,13 +25,17 @@ int main(int argc, char** argv)
 
     std::string input_file = argv[1];
     std::string output_file = argv[1];
+    std::string mem_file = argv[1];
 
     // remove any possible file extensions and add hevc
     size_t lastindex = input_file.find_last_of(".");
     if (lastindex != std::string::npos)
     {
         output_file = input_file.substr(0, lastindex);
+        mem_file = input_file.substr(0, lastindex);
     }
+
+    mem_file = mem_file + ".mhevc";
 
     // add hevc file ending
     output_file = output_file + ".hevc";
@@ -55,10 +60,10 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    return kvazaar_encode(input_file, output_file, width, height, qp, fps, intra_period, preset);
+    return kvazaar_encode(input_file, output_file, mem_file, width, height, qp, fps, intra_period, preset);
 }
 
-int kvazaar_encode(const std::string& input, const std::string& output, 
+int kvazaar_encode(const std::string& input, const std::string& output, const std::string& memory_filename,
     int width, int height, int qp, int fps, int period, std::string& preset)
 {
     std::cout << "Opening files. Input: " << input << " Output: " << output << std::endl;
@@ -66,6 +71,7 @@ int kvazaar_encode(const std::string& input, const std::string& output,
 
     std::ifstream inputFile (input,  std::ios::in  | std::ios::binary);
     std::ofstream outputFile(output, std::ios::out | std::ios::binary);
+    std::ofstream memoryFile(memory_filename, std::ios::out | std::ios::binary);
 
     if (!inputFile.good())
     {
@@ -85,17 +91,17 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         return EXIT_FAILURE;
     }
 
-    if (!outputFile.good())
+    if (!outputFile.good() || !memoryFile.good())
     {
-        if (outputFile.eof())
+        if (outputFile.eof() || memoryFile.eof())
         {
             std::cerr << "Output eof before starting" << std::endl;
         }
-        else if (outputFile.bad())
+        else if (outputFile.bad() || memoryFile.bad())
         {
             std::cerr << "Output bad before starting" << std::endl;
         }
-        else if (outputFile.fail())
+        else if (outputFile.fail() || memoryFile.fail())
         {
             std::cerr << "Output fail before starting" << std::endl;
         }
@@ -124,6 +130,7 @@ int kvazaar_encode(const std::string& input, const std::string& output,
         std::cerr << "Failed to open kvazaar encoder!" << std::endl;
         inputFile.close();
         outputFile.close();
+        memoryFile.close();
         cleanup_kvazaar(img_in, api, enc, config);
         return EXIT_FAILURE;
     }
@@ -164,9 +171,11 @@ int kvazaar_encode(const std::string& input, const std::string& output,
 
         // feed input to kvazaar and write output to file
         int rvalue = EXIT_FAILURE;
-        if (!encode_frame(img_in, rvalue, outputFile, api, enc))
+        if (!encode_frame(img_in, rvalue, outputFile, memoryFile, api, enc))
         {
+            // if encoding fails
             outputFile.close();
+            memoryFile.close();
             cleanup_kvazaar(img_in, api, enc, config);
             return rvalue;
         }
@@ -174,8 +183,9 @@ int kvazaar_encode(const std::string& input, const std::string& output,
 
     // write the rest of the frames that are being encoded to file
     int rvalue = EXIT_FAILURE;
-    while (encode_frame(nullptr, rvalue, outputFile, api, enc));
+    while (encode_frame(nullptr, rvalue, outputFile, memoryFile, api, enc));
 
+    memoryFile.close();
     outputFile.close();
     cleanup_kvazaar(img_in, api, enc, config);
     return rvalue;
@@ -202,8 +212,8 @@ void cleanup_kvazaar(kvz_picture* input, const kvz_api* api, kvz_encoder* enc, k
     }
 }
 
-
-bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, const kvz_api* api, kvz_encoder* enc)
+bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, std::ofstream& memoryFile, 
+    const kvz_api* api, kvz_encoder* enc)
 {
     kvz_picture* img_rec = nullptr;
     kvz_picture* img_src = nullptr;
@@ -240,6 +250,7 @@ bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, co
         // write the size of the chunks into the file also. This makes the files unusable for normal
         // viewing. It would be better to write the sizes to a separate file
         outputFile.write((char*)(&written), sizeof(uint64_t));
+        memoryFile.write((char*)(&written), sizeof(uint64_t));
 
         // write the chunks into the file
         for (kvz_data_chunk* chunk = chunks_out; chunk != nullptr; chunk = chunk->next) {

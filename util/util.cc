@@ -15,6 +15,43 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+void get_chunk_locations(std::string filename, std::vector<uint64_t>& chunk_sizes)
+{
+    std::ifstream inputFile(filename, std::ios::in | std::ios::binary);
+
+    if (!inputFile.good())
+    {
+        if (inputFile.eof())
+        {
+            std::cerr << "Input eof before starting" << std::endl;
+        }
+        else if (inputFile.bad())
+        {
+            std::cerr << "Input bad before starting" << std::endl;
+        }
+        else if (inputFile.fail())
+        {
+            std::cerr << "Input fail before starting" << std::endl;
+        }
+
+        return {};
+    }
+
+    while (!inputFile.eof())
+    {
+        uint64_t chunk_size = 0;
+        if (!inputFile.read(&chunk_size, sizeof(uint64_t))
+        {
+            std::cerr << "Read failed!" << std::endl;
+        }
+        else
+        {
+            chunk_sizes.push_back(chunk_size);
+        }
+    }
+
+    inputFile.close();
+}
 
 void *get_mem(std::string filename, size_t& len)
 {

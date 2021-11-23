@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+void get_chunk_locations(std::string filename, std::vector<uint64_t>& chunk_sizes);
 
 void* get_mem(std::string filename, size_t& len);
 
