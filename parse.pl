@@ -408,7 +408,7 @@ sub parse_latency {
     $avg    /= $frame_avg;
     $frames = 100*$frames/(598*$rounds);
 
-    print "Completed: $frames%, intra $intra, inter $inter, avg $avg\n";
+    print "Completed: $frames%, intra $intra ms, inter $inter ms, avg $avg ms\n";
 }
 
 sub print_help {
