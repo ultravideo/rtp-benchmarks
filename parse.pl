@@ -238,6 +238,13 @@ sub parse_csv {
 
     my $previous_threads = 0;
     open my $output_file, '>', "$lib.csv" or die "failed to open file: $lib.csv";
+
+    my $frame_count = get_frame_count($lib);
+    my $filesize_in_units = convert_bytes_to_unit($filesize, $unit);
+    
+    # print the thread number on first line on the file
+    print $output_file "File size ($unit); $filesize_in_units; \n";
+    print $output_file "Frame count; $frame_count;\n\n";
     
     # create empty variables
     my (@recv_usr, @recv_sys, @recv_cpu, @recv_total, @recv_frame, @recv_bytes, @recv_goodput) = () x 7;
@@ -271,11 +278,10 @@ sub parse_csv {
 
             }
             
-            my $frame_count = get_frame_count($lib);
-            my $filesize_in_units = convert_bytes_to_unit($filesize, $unit);
+
             
             # print the thread number on first line on the file
-            print $output_file "$threads_of_result threads;; File size ($unit); $filesize_in_units; Frame count; $frame_count;\n";
+            print $output_file "$threads_of_result threads;\n";
             $previous_threads = $threads_of_result;
             
             # reset variable values
