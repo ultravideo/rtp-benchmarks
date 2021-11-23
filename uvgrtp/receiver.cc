@@ -111,6 +111,9 @@ void receiver_thread(int thread_num, int nthreads, std::string local_address, in
                     << thread_info[tid].pkts << " frames in total" << std::endl;
                 break;
             }
+
+            // sleep so we don't busy loop
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
     else
