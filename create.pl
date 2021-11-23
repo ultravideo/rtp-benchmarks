@@ -20,7 +20,7 @@ sub print_help {
 GetOptions(
     "input|file|filename|i=s" => \(my $filename = ""),
     "resolution|res=s"        => \(my $resolution = "3840x2160"),
-    "quantization|qp=i"       => \(my $qp = 32),
+    "quantization|qp=i"       => \(my $qp = 27),
     "framerate|fps=i"         => \(my $fps = 30),
     "intra-period|intra=i"    => \(my $period = 64),
     "preset|pre=s"            => \(my $preset = "ultrafast"),
