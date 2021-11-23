@@ -1,4 +1,4 @@
-#include "uvgrtp_util.h"
+#include "uvgrtp_util.hh"
 #include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
@@ -13,7 +13,7 @@ size_t nframes = 0;
 void hook_receiver(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     // send the frame immediately back
-    uvg_rtp::media_stream receive = (uvg_rtp::media_stream *)arg;
+    uvgrtp::media_stream* receive = (uvgrtp::media_stream *)arg;
     receive->push_frame(frame->payload, frame->payload_len, 0);
     nframes++;
 }

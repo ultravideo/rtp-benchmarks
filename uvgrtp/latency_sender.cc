@@ -1,4 +1,4 @@
-#include "uvgrtp_util.h"
+#include "uvgrtp_util.hh"
 #include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <string>
 
-constexpr float LATENCY_TEST_FPS = 30.0f;
 
 std::chrono::high_resolution_clock::time_point frame_send_time;
 
@@ -53,11 +52,8 @@ static int sender(std::string input_file, std::string local_address, int local_p
     uvgrtp::session* session = nullptr;
     uvgrtp::media_stream* send = nullptr;
 
-    uint16_t thread_local_port = local_port + thread_num * 2;
-    uint16_t thread_remote_port = remote_port + thread_num * 2;
-
     intialize_uvgrtp(rtp_ctx, &session, &send, remote_address, local_address,
-        thread_local_port, thread_remote_port, vvc_enabled, srtp_enabled);
+        local_port, remote_port, vvc_enabled, srtp_enabled);
 
     send->install_receive_hook(nullptr, hook_sender);
 
@@ -73,7 +69,6 @@ static int sender(std::string input_file, std::string local_address, int local_p
     }
 
     uint64_t current_frame = 0;
-    uint64_t chunk_size = 0;
     uint64_t period = (uint64_t)((1000 / fps) * 1000);
     size_t offset = 0;
     rtp_error_t ret = RTP_OK;
