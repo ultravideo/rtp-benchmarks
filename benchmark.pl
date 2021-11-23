@@ -134,7 +134,7 @@ sub recv_benchmark {
             my $thread = $_;
             foreach (@fps_vals) {
                 my $fps = $_;
-                        my $logname = "recv_$format" . "_RTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                my $logname = "recv_$format" . "_RTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
                 if ($srtp)
                 {
                     $logname = "recv_$format" . "_SRTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
@@ -211,12 +211,20 @@ sub send_latency {
 
     $socket = mk_ssock($saddr, $port);
     $remote = $socket->accept();
+    
+    my $logname = "latencies_$format" . "_RTP_$fps". "fps_$iter" . "rounds";
+    if ($srtp)
+    {
+        $logname = "latencies_$format" . "_SRTP_$fps". "fps_$iter" . "rounds";
+    }
+    
+    my $result_file = "$lib/results/$logname";
 
     for ((1 .. $iter)) {
         print "Latency send benchmark round $_" . "/$iter\n";
         $remote->recv($data, 16);
         
-        system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $lib/results/latencies 2>&1");
+        system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $result_file 2>&1");
     }
     print "Latency send benchmark finished\n";
     $socket->close();

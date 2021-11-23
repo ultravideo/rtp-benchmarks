@@ -145,7 +145,7 @@ Receiver
 
 ### Latency benchmarking
 
-Latency benchmark sends the packet from sender and the receiver sends the packet back immediately. Start the receiver before you start the sender.
+Latency benchmark sends the packet from sender and the receiver sends the packet back immediately. Start the sender before you start the receiver.
 
 Latency sender example:
 ```
@@ -187,7 +187,7 @@ It is also possible to parse individual files, find the best configuration or pr
 
 ### Calculate averages latencies for inter, intra and all frames
 
-This is how you get the average latencies from the benchmarks:
+Latencies takes in just one file at a time in `--path` parameter. This is how you get the average latencies from the benchmarks:
 
 ```
 ./parse.pl --path results/uvgrtp/latencies --parse=latency
