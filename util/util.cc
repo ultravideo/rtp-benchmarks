@@ -34,13 +34,13 @@ void get_chunk_locations(std::string filename, std::vector<uint64_t>& chunk_size
             std::cerr << "Input fail before starting" << std::endl;
         }
 
-        return {};
+        return;
     }
 
     while (!inputFile.eof())
     {
         uint64_t chunk_size = 0;
-        if (!inputFile.read(&chunk_size, sizeof(uint64_t))
+        if (!inputFile.read((char*)&chunk_size, sizeof(uint64_t)))
         {
             std::cerr << "Read failed!" << std::endl;
         }
@@ -51,6 +51,20 @@ void get_chunk_locations(std::string filename, std::vector<uint64_t>& chunk_size
     }
 
     inputFile.close();
+}
+
+std::string get_chunk_filename(std::string& input_filename)
+{
+    std::string mem_file = "";
+
+    // remove any possible file extensions and add hevc
+    size_t lastindex = input_filename.find_last_of(".");
+    if (lastindex != std::string::npos)
+    {
+        mem_file = input_filename.substr(0, lastindex);
+    }
+
+    return mem_file + ".mhevc";
 }
 
 void *get_mem(std::string filename, size_t& len)

@@ -1,5 +1,7 @@
 #include <kvazaar.h>
 
+#include "util.hh"
+
 #include <iostream>
 #include <string>
 #include <cstdio>
@@ -25,17 +27,15 @@ int main(int argc, char** argv)
 
     std::string input_file = argv[1];
     std::string output_file = argv[1];
-    std::string mem_file = argv[1];
-
+    
     // remove any possible file extensions and add hevc
     size_t lastindex = input_file.find_last_of(".");
     if (lastindex != std::string::npos)
     {
         output_file = input_file.substr(0, lastindex);
-        mem_file = input_file.substr(0, lastindex);
     }
 
-    mem_file = mem_file + ".mhevc";
+    std::string mem_file = get_chunk_filename(input_file);
 
     // add hevc file ending
     output_file = output_file + ".hevc";
@@ -108,7 +108,6 @@ int kvazaar_encode(const std::string& input, const std::string& output, const st
 
         return EXIT_FAILURE;
     }
-
 
     kvz_encoder* enc = NULL;
     const kvz_api* api = kvz_api_get(8);
@@ -246,10 +245,6 @@ bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, st
         }
 
         std::cout << "Write the size of the chunk: " << written << std::endl;
-
-        // write the size of the chunks into the file also. This makes the files unusable for normal
-        // viewing. It would be better to write the sizes to a separate file
-        outputFile.write((char*)(&written), sizeof(uint64_t));
         memoryFile.write((char*)(&written), sizeof(uint64_t));
 
         // write the chunks into the file

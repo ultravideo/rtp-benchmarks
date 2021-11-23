@@ -3,8 +3,8 @@
 CXX = g++
 CXXFLAGS = -Wall -Wextra -O2 -std=c++11 -g
 
-test_file_creation: util/test_file_creation.cc
-	$(CXX) $(CXXFLAGS) -o test_file_creation util/test_file_creation.cc -lkvazaar -lpthread 
+test_file_creation: util/test_file_creation.cc util/util.cc
+	$(CXX) $(CXXFLAGS) -o test_file_creation util/test_file_creation.cc util/util.cc -lkvazaar -lpthread 
 
 uvgrtp_sender: uvgrtp/sender.cc util/util.cc
 	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
