@@ -103,6 +103,7 @@ sub send_benchmark {
     }
 
     print "Send benchmark finished\n";
+    $socket->close();
 }
 
 sub recv_benchmark {
@@ -158,6 +159,7 @@ sub recv_benchmark {
     }
 
     print "Receive benchmark finished\n";
+    $socket->close();
 }
 
 # use netcat to capture the stream
@@ -198,6 +200,7 @@ sub recv_generic {
     }
 
     print "End netcat receiver\n";
+    $socket->close();
 }
 
 sub send_latency {
@@ -216,6 +219,7 @@ sub send_latency {
         system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $lib/results/latencies 2>&1");
     }
     print "Latency send benchmark finished\n";
+    $socket->close();
 }
 
 sub recv_latency {
@@ -232,6 +236,7 @@ sub recv_latency {
         sleep 2;
     }
     print "Latency receive benchmark finished\n";
+    $socket->close();
 }
 
 # TODO explain every parameter
