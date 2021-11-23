@@ -209,8 +209,9 @@ sub send_latency {
     $remote = $socket->accept();
 
     for ((1 .. $iter)) {
+        print "Latency send benchmark round $_\n";
         $remote->recv($data, 16);
-        system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp>> $lib/results/latencies 2>&1");
+        system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $lib/results/latencies 2>&1");
     }
     print "Latency send benchmark finished\n";
 }
@@ -221,6 +222,7 @@ sub recv_latency {
     my $socket = mk_rsock($saddr, $port);
 
     for ((1 .. $iter)) {
+        print "Latency receive benchmark round $_\n";
         $socket->send("start");
         system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp 2>&1 >/dev/null");
         sleep 2;
