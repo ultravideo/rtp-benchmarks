@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-void get_chunk_locations(std::string filename, std::vector<uint64_t>& chunk_sizes)
+void get_chunk_sizes(std::string filename, std::vector<uint64_t>& chunk_sizes)
 {
     std::ifstream inputFile(filename, std::ios::in | std::ios::binary);
 
@@ -42,7 +42,7 @@ void get_chunk_locations(std::string filename, std::vector<uint64_t>& chunk_size
         uint64_t chunk_size = 0;
         if (!inputFile.read((char*)&chunk_size, sizeof(uint64_t)))
         {
-            std::cerr << "Read failed!" << std::endl;
+            break;
         }
         else
         {

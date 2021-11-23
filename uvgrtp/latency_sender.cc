@@ -61,7 +61,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     void* mem = get_mem(input_file, len);
 
     std::vector<uint64_t> chunk_sizes;
-    get_chunk_locations(get_chunk_filename(input_file), chunk_sizes);
+    get_chunk_sizes(get_chunk_filename(input_file), chunk_sizes);
 
     if (mem == nullptr || chunk_sizes.empty())
     {
@@ -114,8 +114,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
 int main(int argc, char **argv)
 {
     if (argc != 9) {
-        fprintf(stderr, "usage: ./%s <input file> <local address> <local port> <remote address> <remote port> \
-            <fps> <format> <srtp> \n", __FILE__);
+        fprintf(stderr, "usage: ./%s <input file> <local address> <local port> <remote address> <remote port> <fps> <format> <srtp> \n", __FILE__);
         return EXIT_FAILURE;
     }
 

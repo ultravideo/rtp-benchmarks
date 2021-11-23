@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-void get_chunk_locations(std::string filename, std::vector<uint64_t>& chunk_sizes);
+void get_chunk_sizes(std::string filename, std::vector<uint64_t>& chunk_sizes);
 
 std::string get_chunk_filename(std::string& input_filename);
 

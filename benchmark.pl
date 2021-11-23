@@ -201,29 +201,33 @@ sub recv_generic {
 }
 
 sub send_latency {
-    print "Latency send benchmark\n";
+    
     my ($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp) = @_;
     my ($socket, $remote, $data);
+    print "Latency send benchmark for $lib\n";
 
     $socket = mk_ssock($saddr, $port);
     $remote = $socket->accept();
 
     for ((1 .. $iter)) {
-        print "Latency send benchmark round $_\n";
+        print "Latency send benchmark round $_" . "/$iter\n";
         $remote->recv($data, 16);
+        
         system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $lib/results/latencies 2>&1");
     }
     print "Latency send benchmark finished\n";
 }
 
 sub recv_latency {
-    print "Latency receive benchmark\n";
     my ($lib, $saddr, $raddr, $port, $iter, $format, $srtp) = @_;
+    print "Latency receive benchmark for $lib\n";
+    
     my $socket = mk_rsock($saddr, $port);
-
+    
     for ((1 .. $iter)) {
-        print "Latency receive benchmark round $_\n";
+        print "Latency receive benchmark round $_" . "/$iter\n";
         $socket->send("start");
+        
         system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp 2>&1 >/dev/null");
         sleep 2;
     }

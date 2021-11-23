@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     void *mem    = get_mem(input_file, len);
 
     std::vector<uint64_t> chunk_sizes;
-    get_chunk_locations(get_chunk_filename(input_file), chunk_sizes);
+    get_chunk_sizes(get_chunk_filename(input_file), chunk_sizes);
 
     if (mem == nullptr || chunk_sizes.empty())
     {
