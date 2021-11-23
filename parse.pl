@@ -274,11 +274,7 @@ sub parse_csv {
                 print $output_file "frame loss (%);"          . join(";", @recv_frame)  . "\n";
                 print $output_file "bytes received (%);"     . join(";", @recv_bytes)  . "\n";
                 print $output_file "recv goodput ($unit);"       . join(";", @recv_goodput)  . "\n\n";
-
-
             }
-            
-
             
             # print the thread number on first line on the file
             print $output_file "$threads_of_result threads;\n";
@@ -384,12 +380,13 @@ sub parse {
 }
 
 sub parse_latency {
-    my ($lib, $iter, $path, $unit) = @_;
+    my ($lib, $path, $unit) = @_;
     my ($frames, $avg, $intra, $inter, $cnt) = (0) x 5;
     my $frame_avg = 0;
 
     open my $fh, '<', $path or die "failed to open file $path\n";
-
+    
+    my $rounds = 0;
     # each iteration parses one benchmark run
     while (my $line = <$fh>) {
         my @nums = ($line =~ m/(\d+).*intra\s(\d+\.\d+).*inter\s(\d+\.\d+).*avg\s(\d+\.\d+)/);
@@ -403,14 +400,15 @@ sub parse_latency {
         $inter  += $nums[2];
         $avg    += $nums[3];
         $cnt    += 1;
+        $rounds += 1;
     }
 
     $intra  /= $cnt;
     $inter  /= $cnt;
     $avg    /= $frame_avg;
-    $frames /= get_frame_count($lib);
+    $frames = 100*$frames/(598*$rounds);
 
-    print "$frames: intra $intra, inter $inter, avg $avg\n";
+    print "Completed: $frames%, intra $intra, inter $inter, avg $avg\n";
 }
 
 sub print_help {
@@ -472,7 +470,7 @@ if ($parse eq "best" or $parse eq "all") {
 } elsif ($parse eq "csv") {
     parse_csv($lib, $iter, $path, $unit, $filesize);
 } elsif ($parse eq "latency") {
-    parse_latency($lib, $iter, $path, $unit);
+    parse_latency($lib, $path, $unit);
 } elsif ($role eq "send") {
     print_send($lib, $iter, $threads, $path, $unit, $filesize);
 } elsif ($role eq "recv") {

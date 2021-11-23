@@ -190,7 +190,7 @@ It is also possible to parse individual files, find the best configuration or pr
 Latencies takes in just one file at a time in `--path` parameter. This is how you get the average latencies from the benchmarks:
 
 ```
-./parse.pl --path results/uvgrtp/latencies --parse=latency
+./parse.pl --path uvgrtp/results/latencies_hevc_RTP_30fps_10rounds --parse=latency
 ```
 
 ## Papers
