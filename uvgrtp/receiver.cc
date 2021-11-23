@@ -1,4 +1,5 @@
 #include "uvgrtp_util.hh"
+#include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
 #include <uvgrtp/clock.hh>
@@ -33,28 +34,17 @@ int main(int argc, char** argv)
     }
 
     std::string local_address = argv[1];
-    int local_port = atoi(argv[2]);
+    int local_port            = atoi(argv[2]);
     std::string remote_address = argv[3];
-    int remote_port = atoi(argv[4]);
+    int remote_port            = atoi(argv[4]);
 
     std::cout << "Starting uvgRTP receiver tests. " << local_address << ":" << local_port 
         << "<-" << remote_address << ":" << remote_port << std::endl;
 
     int nthreads = atoi(argv[5]);
-    std::string format = argv[6];
 
-    bool vvc = false;
-    if (format == "vvc" || format == "h266")
-    {
-        vvc = true;
-    }
-    else if (format != "hevc" && format != "h265")
-    {
-        std::cerr << "Unsupported uvgRTP receiver format: " << format << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    bool srtp = false; // TODO
+    bool vvc_enabled = get_vvc_state(argv[6]);
+    bool srtp_enabled = get_srtp_state(argv[7]);
 
     thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
 
@@ -62,7 +52,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < nthreads; ++i) {
         threads.push_back(new std::thread(receiver_thread, i, nthreads, local_address, local_port,
-            remote_address, remote_port, vvc, srtp));
+            remote_address, remote_port, vvc_enabled, srtp_enabled));
     }
 
     // wait all the thread executions to end and delete them

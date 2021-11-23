@@ -1,4 +1,5 @@
 #include "uvgrtp_util.h"
+#include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
 #include <uvgrtp/clock.hh>
@@ -17,22 +18,23 @@ void hook_receiver(void *arg, uvg_rtp::frame::rtp_frame *frame)
     nframes++;
 }
 
-int receiver(void)
+int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port,
+    bool vvc_enabled, bool srtp_enabled)
 {
-    std::string addr("127.0.0.1");
-
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
     uvgrtp::media_stream* receive = nullptr;
-    uint16_t send_port = SENDER_PORT;
-    uint16_t receive_port = RECEIVER_PORT;
 
-    intialize_uvgrtp(rtp_ctx, &session, &receive, addr_, addr_, receive_port, send_port, false);
+    intialize_uvgrtp(rtp_ctx, &session, &receive, remote_address, local_address,
+        local_port, remote_port, vvc_enabled, srtp_enabled);
 
     receive->install_receive_hook(receive, hook_receiver);
 
+    // the reaceiving end is not measured in latency tests
     while (nframes < EXPECTED_FRAMES)
+    {
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    }
 
     cleanup_uvgrtp(rtp_ctx, session, receive);
 
@@ -41,7 +43,18 @@ int receiver(void)
 
 int main(int argc, char **argv)
 {
-    (void)argc, (void)argv;
+    if (argc != 7) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <format> <srtp>\n", __FILE__);
+        return EXIT_FAILURE;
+    }
 
-    return receiver();
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+    bool vvc_enabled = get_vvc_state(argv[5]);
+    bool srtp_enabled = get_srtp_state(argv[6]);
+
+    return receiver(local_address, local_port, remote_address, remote_port, vvc_enabled, srtp_enabled);
 }

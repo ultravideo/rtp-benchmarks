@@ -200,29 +200,29 @@ sub recv_generic {
     print "End netcat receiver\n";
 }
 
-sub lat_send {
+sub send_latency {
     print "Latency send benchmark\n";
-    my ($lib, $file, $addr, $port) = @_;
+    my ($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp) = @_;
     my ($socket, $remote, $data);
 
-    $socket = mk_ssock($addr, $port);
+    $socket = mk_ssock($saddr, $port);
     $remote = $socket->accept();
 
-    for ((1 .. 100)) {
+    for ((1 .. $iter)) {
         $remote->recv($data, 16);
-        system ("./$lib/latency_sender >> $lib/results/latencies 2>&1");
+        system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp>> $lib/results/latencies 2>&1");
     }
     print "Latency send benchmark finished\n";
 }
 
-sub lat_recv {
+sub recv_latency {
     print "Latency receive benchmark\n";
-    my ($lib, $addr, $port) = @_;
-    my $socket = mk_rsock($addr, $port);
+    my ($lib, $saddr, $raddr, $port, $iter, $format, $srtp) = @_;
+    my $socket = mk_rsock($saddr, $port);
 
-    for ((1 .. 100)) {
+    for ((1 .. $iter)) {
         $socket->send("start");
-        system ("./$lib/latency_receiver 2>&1 >/dev/null");
+        system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp 2>&1 >/dev/null");
         sleep 2;
     }
     print "Latency receive benchmark finished\n";
@@ -236,7 +236,7 @@ sub print_help {
     . "\t--file    <test filename>\n"
     . "\t--saddr   <sender address>\n"
     . "\t--raddr   <receiver address>\n"
-    . "\t--port    <server port>\n"
+    . "\t--port    <used port>\n"
     . "\t--threads <# of threads>\n"
     . "\t--start   <start fps>\n"
     . "\t--end     <end fps>\n\n";
@@ -244,8 +244,10 @@ sub print_help {
     print "usage (latency):\n  ./benchmark.pl \n"
     . "\t--latency\n"
     . "\t--role <send|recv>\n"
-    . "\t--addr <server address>\n"
-    . "\t--port <server port>\n"
+    . "\t--saddr  <sender address>\n"
+    . "\t--raddr  <receiver address>\n"
+    . "\t--port   <used port>\n"
+    . "\t--fps <the fps at which benchmarking is done>\n"
     . "\t--lib <uvgrtp|ffmpeg|live555>\n\n" and exit;
 }
 
@@ -262,7 +264,7 @@ GetOptions(
     "end|e=f"                    => \(my $end = 0),
     "step=i"                     => \(my $step = 0),
     "use-nc|use-netcat"          => \(my $nc = 0),
-    "framerates|fps=s"           => \(my $fps = ""),
+    "framerate|framerates|fps=s" => \(my $fps = ""),
     "latency|lat"                => \(my $lat = 0),
     "srtp"                       => \(my $srtp = 0),
     "exec=s"                     => \(my $exec = "default"),
@@ -282,6 +284,7 @@ die "Please specify role with --role" if !$role;
 die "library not supported\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
 die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266"));
 
+$fps = 30.0 if $lat and !$fps;
 
 my @fps_vals = ();
 
@@ -315,7 +318,7 @@ if ($role eq "send" or $role eq "sender") {
     
     if ($lat) {
         system "make $lib" . "_latency_sender";
-        lat_send($lib, $file, $raddr, $port);
+        send_latency($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp);
     } else {
         if ($exec eq "default") {
             system "make $lib" . "_sender";
@@ -328,7 +331,7 @@ if ($role eq "send" or $role eq "sender") {
     
     if ($lat) {
         system "make $lib" . "_latency_receiver";
-        lat_recv($lib, $saddr, $port);
+        recv_latency($lib, $saddr, $raddr, $port, $iter, $format, $srtp);
     } elsif (!$nc) {
         if ($exec eq "default") {
             system "make $lib" . "_receiver";

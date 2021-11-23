@@ -13,3 +13,7 @@ int get_next_frame_start(uint8_t* data, uint32_t offset, uint32_t data_len, uint
 
 void write_send_results_to_file(const std::string& filename, 
     const size_t bytes, const uint64_t diff);
+
+bool get_srtp_state(std::string srtp);
+
+bool get_vvc_state(std::string format);

@@ -130,3 +130,26 @@ void write_send_results_to_file(const std::string& filename,
         << diff << " ms " << diff / 1000 << " s" << std::endl;
     result_file.close();
 }
+
+bool get_srtp_state(std::string srtp)
+{
+    if (srtp == "1" || srtp == "yes" || srtp == "y" || srtp == "srtp")
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool get_vvc_state(std::string format)
+{
+    if (format == "vvc" || format == "h266")
+    {
+        return true;
+    }
+    else if (format != "hevc" && format != "h265")
+    {
+        std::cerr << "Unsupported sender format: " << format << std::endl;
+    }
+    return false;
+}

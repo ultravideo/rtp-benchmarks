@@ -1,4 +1,5 @@
 #include "uvgrtp_util.h"
+#include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
 #include <uvgrtp/clock.hh>
@@ -9,9 +10,7 @@
 
 constexpr float LATENCY_TEST_FPS = 30.0f;
 
-extern void* get_mem(std::string filename, size_t& len);
-
-std::chrono::high_resolution_clock::time_point start2;
+std::chrono::high_resolution_clock::time_point frame_send_time;
 
 size_t frames   = 0;
 size_t ninters  = 0;
@@ -28,7 +27,7 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
     if (frame) {
 
         uint64_t diff = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now() - start2
+            std::chrono::high_resolution_clock::now() - frame_send_time
         ).count();
 
         switch ((frame->payload[0] >> 1) & 0x3f) {
@@ -47,64 +46,63 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
     }
 }
 
-static int sender(void)
+static int sender(std::string input_file, std::string local_address, int local_port, 
+    std::string remote_address, int remote_port, float fps, bool vvc_enabled, bool srtp_enabled)
 {
-    std::string addr("127.0.0.1");
-
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
     uvgrtp::media_stream* send = nullptr;
-    uint16_t send_port = SENDER_PORT + thread_num * 2;
-    uint16_t receive_port = RECEIVER_PORT + thread_num * 2;
 
-    intialize_uvgrtp(rtp_ctx, session, send, addr_, addr_, send_port, receive_port, false);
+    uint16_t thread_local_port = local_port + thread_num * 2;
+    uint16_t thread_remote_port = remote_port + thread_num * 2;
+
+    intialize_uvgrtp(rtp_ctx, &session, &send, remote_address, local_address,
+        thread_local_port, thread_remote_port, vvc_enabled, srtp_enabled);
 
     send->install_receive_hook(nullptr, hook_sender);
 
     size_t len = 0;
-    void* mem = get_mem("test_file.hevc", len);
+    void* mem = get_mem(input_file, len);
 
-    if (mem == nullptr)
+    std::vector<uint64_t> chunk_sizes;
+    get_chunk_locations(get_chunk_filename(input_file), chunk_sizes);
+
+    if (mem == nullptr || chunk_sizes.empty())
     {
         return EXIT_FAILURE;
     }
 
-    uint64_t csize = 0;
-    uint64_t diff = 0;
-    uint64_t current = 0;
+    uint64_t current_frame = 0;
     uint64_t chunk_size = 0;
-    uint64_t period = (uint64_t)((1000 / LATENCY_TEST_FPS) * 1000);
+    uint64_t period = (uint64_t)((1000 / fps) * 1000);
+    size_t offset = 0;
     rtp_error_t ret = RTP_OK;
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-    for (int rounds = 0; rounds < 1; ++rounds) {
-        for (size_t offset = 0, k = 0; offset < len; ++k) {
-            memcpy(&chunk_size, (uint8_t *)mem + offset, sizeof(uint64_t));
-
-            offset += sizeof(uint64_t);
-
-            // record send time
-            start2 = std::chrono::high_resolution_clock::now();
-            if ((ret = send->push_frame((uint8_t *)mem + offset, chunk_size, 0)) != RTP_OK) {
-                fprintf(stderr, "push_frame() failed!\n");
-                cleanup_uvgrtp(rtp_ctx, session, send);
-                return EXIT_FAILURE;
-            }
-
-            // wait until is the time to send next latency test frame
-            auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::high_resolution_clock::now() - start
-            ).count();
-
-            if (runtime < current * period)
-                std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
-
-            current += 1;
-            offset  += chunk_size;
+    for (auto& chunk_size : chunk_sizes)
+    {
+        // record send time
+        frame_send_time = std::chrono::high_resolution_clock::now();
+        if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
+            fprintf(stderr, "push_frame() failed!\n");
+            cleanup_uvgrtp(rtp_ctx, session, send);
+            return EXIT_FAILURE;
         }
+
+        current_frame += 1;
+        offset += chunk_size;
+
+        // wait until is the time to send next latency test frame
+        auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now() - start).count();
+
+        if (runtime < current_frame * period)
+            std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // just so we don't exit too soon
+
+    // just so we don't exit before last frame has arrived. Does not affect results
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
 
     cleanup_uvgrtp(rtp_ctx, session, send);
 
@@ -120,7 +118,22 @@ static int sender(void)
 
 int main(int argc, char **argv)
 {
-    (void)argc, (void)argv;
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <input file> <local address> <local port> <remote address> <remote port> \
+            <fps> <format> <srtp> \n", __FILE__);
+        return EXIT_FAILURE;
+    }
 
-    return sender();
+    std::string input_file     = argv[1];
+
+    std::string local_address  = argv[2];
+    int local_port             = atoi(argv[3]);
+    std::string remote_address = argv[4];
+    int remote_port            = atoi(argv[5]);
+
+    float fps                  = atof(argv[6]);
+    bool vvc_enabled           = get_vvc_state(argv[7]);
+    bool srtp_enabled          = get_srtp_state(argv[8]);
+
+    return sender(input_file, local_address, local_port, remote_address, remote_port, fps, vvc_enabled, srtp_enabled);
 }

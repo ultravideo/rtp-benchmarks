@@ -23,37 +23,18 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    std::string input_file  = argv[1];
-    std::string result_file = argv[2];
+    std::string input_file     = argv[1];
+    std::string result_file    = argv[2];
 
-    std::string local_address = argv[3];
-    int local_port            = atoi(argv[4]);
+    std::string local_address  = argv[3];
+    int local_port             = atoi(argv[4]);
     std::string remote_address = argv[5];
     int remote_port            = atoi(argv[6]);
 
-    int nthreads = atoi(argv[7]);
-    int fps      = atoi(argv[8]);
-    std::string format = argv[9];
-    std::string srtp   = argv[10];
-
-    bool vvc = false;
-
-    if (format == "vvc" || format == "h266")
-    {
-        vvc = true;
-    }
-    else if (format != "hevc" && format != "h265")
-    {
-        std::cerr << "Unsupported uvgRTP sender format: " << format << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    bool srtp_enabled = false;
-
-    if (srtp == "1" || srtp == "yes" || srtp == "y" || srtp == "srtp")
-    {
-        srtp_enabled = true;
-    }
+    int nthreads               = atoi(argv[7]);
+    int fps                    = atoi(argv[8]);
+    bool vvc_enabled           = get_vvc_state(argv[9]);
+    bool srtp_enabled          = get_srtp_state(argv[10]);
 
     std::cout << "Starting uvgRTP sender tests. " << local_address << ":" << local_port
         << "->" << remote_address << ":" << remote_port << std::endl;
@@ -75,7 +56,7 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < nthreads; ++i) {
         threads.push_back(new std::thread(sender_thread, mem, local_address, local_port, remote_address, 
-            remote_port, i, fps, vvc, srtp_enabled, result_file, chunk_sizes));
+            remote_port, i, fps, vvc_enabled, srtp_enabled, result_file, chunk_sizes));
     }
 
     for (unsigned int i = 0; i < threads.size(); ++i) {
