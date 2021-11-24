@@ -225,7 +225,8 @@ sub send_latency {
         print "Latency send benchmark round $_" . "/$iter\n";
         $remote->recv($data, 16);
         
-        system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $result_file 2>&1");
+        my $exit_code = system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $result_file 2>&1");
+        die "Latency sender failed! \n" if ($exit_code ne 0);
     }
     print "Latency send benchmark finished\n";
     $socket->close();
@@ -243,10 +244,11 @@ sub recv_latency {
     
     for ((1 .. $iter)) {
         print "Latency receive benchmark round $_" . "/$iter\n";
-        sleep 2;
+        sleep 1; # 1 s, make sure the sender has managed to catch up
         $socket->send("start");
         
-        system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp 2>&1 >/dev/null");
+        my $exit_code = system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp 2>&1 >/dev/null");
+        die "Latency receiver failed! \n" if ($exit_code ne 0);
     }
     print "Latency receive benchmark finished\n";
     $socket->close();
