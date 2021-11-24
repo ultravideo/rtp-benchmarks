@@ -53,7 +53,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     uvgrtp::media_stream* send = nullptr;
 
     intialize_uvgrtp(rtp_ctx, &session, &send, remote_address, local_address,
-        local_port, remote_port, vvc_enabled, srtp_enabled);
+        local_port, remote_port, srtp_enabled, vvc_enabled);
 
     send->install_receive_hook(nullptr, hook_sender);
 

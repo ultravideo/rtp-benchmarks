@@ -26,7 +26,7 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
     uvgrtp::media_stream* receive = nullptr;
 
     intialize_uvgrtp(rtp_ctx, &session, &receive, remote_address, local_address,
-        local_port, remote_port, vvc_enabled, srtp_enabled);
+        local_port, remote_port, srtp_enabled, vvc_enabled);
 
     receive->install_receive_hook(receive, hook_receiver);
 
