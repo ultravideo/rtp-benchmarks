@@ -6,16 +6,20 @@
 
 #include <cstring>
 #include <algorithm>
+#include <chrono>
+#include <mutex>
 
-
-size_t nframes = 0;
+std::chrono::high_resolution_clock::time_point last_packet_arrival;
+std::mutex time_point_mutex;
 
 void hook_receiver(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     // send the frame immediately back
     uvgrtp::media_stream* receive = (uvgrtp::media_stream *)arg;
     receive->push_frame(frame->payload, frame->payload_len, 0);
-    nframes++;
+    time_point_mutex.lock();
+    last_packet_arrival = std::chrono::high_resolution_clock::now();
+    time_point_mutex.unlock();
 }
 
 int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port,
@@ -30,11 +34,18 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
 
     receive->install_receive_hook(receive, hook_receiver);
 
-    // the reaceiving end is not measured in latency tests
-    while (nframes < EXPECTED_FRAMES)
+    last_packet_arrival = std::chrono::high_resolution_clock::now();
+
+    // the receiving end is not measured in latency tests
+    time_point_mutex.lock();
+    while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - 
+        last_packet_arrival).count() > 200)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        time_point_mutex.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        time_point_mutex.lock();
     }
+    time_point_mutex.unlock();
 
     cleanup_uvgrtp(rtp_ctx, session, receive);
 
