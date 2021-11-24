@@ -56,15 +56,17 @@ void get_chunk_sizes(std::string filename, std::vector<uint64_t>& chunk_sizes)
 std::string get_chunk_filename(std::string& input_filename)
 {
     std::string mem_file = "";
-
+    std::string ending = "";
     // remove any possible file extensions and add hevc
     size_t lastindex = input_filename.find_last_of(".");
+
     if (lastindex != std::string::npos)
     {
+        ending = input_filename.substr(lastindex + 1);
         mem_file = input_filename.substr(0, lastindex);
     }
 
-    return mem_file + ".mhevc";
+    return mem_file + ".m" + ending;
 }
 
 void *get_mem(std::string filename, size_t& len)

@@ -70,6 +70,8 @@ In order to run the benchmarking, a specially formatted file is needed. The test
 
 `--input` is the only mandatory parameter.
 
+There used to be a way to create a VVC file for testing, but due to unfortunate circumstances the script was lost. The VVC support needs a new script that would go through an existing VVC file and record the sizes of frames as 64-bit unsigned integers. The filename should follow format: `<vvc video file name>.m<extension>`. Since the VVC RTP format is very close to HEVC RTP format, they behave very similarly. If you however need to test the VVC performance, the script can be recreated.
+
 ## Phase 3: Running the benchmarks
 
 This framework offers benchmarking for goodput (framerate) and latency. There is also a netcat receiver to analyze the sender end, but this is not mean for benchmarking, only for validating part of the framework.
