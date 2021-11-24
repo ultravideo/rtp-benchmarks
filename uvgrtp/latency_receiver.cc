@@ -9,6 +9,7 @@
 #include <chrono>
 
 bool frame_received = true;
+int total_frames_received = 0;
 
 void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
@@ -16,6 +17,7 @@ void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
     uvgrtp::media_stream* receive = (uvgrtp::media_stream*)arg;
     receive->push_frame(frame->payload, frame->payload_len, 0);
     frame_received = true;
+    ++total_frames_received;
 }
 
 int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port,
@@ -32,13 +34,17 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
     // the receiving end is not measured in latency tests
     receive->install_receive_hook(receive, hook_receiver);
     
-    while (frame_received)
+    while (frame_received && total_frames_received < EXPECTED_FRAMES)
     {
         frame_received = false;
         std::this_thread::sleep_for(std::chrono::milliseconds(timout));
     }
 
-    std::cout << "No more frames received for " << timout << " ms." << std::endl;
+    if (total_frames_received < EXPECTED_FRAMES)
+    {
+        std::cout << "Received " << total_frames_received << " frames. No more frames received for "
+            << timout << " ms." << std::endl;
+    }
 
     cleanup_uvgrtp(rtp_ctx, session, receive);
 
