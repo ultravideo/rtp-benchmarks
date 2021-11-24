@@ -84,7 +84,7 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
     uint16_t thread_remote_port = remote_port + thread_num * 2;
 
     intialize_uvgrtp(rtp_ctx, &session, &send, remote_address, local_address,
-        thread_local_port, thread_remote_port, vvc, srtp);
+        thread_local_port, thread_remote_port, srtp, vvc);
 
     size_t bytes_sent = 0;
     uint64_t current_frame = 0;
