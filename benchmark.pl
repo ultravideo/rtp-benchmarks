@@ -259,13 +259,17 @@ sub print_help {
     print "usage (benchmark):\n  ./benchmark.pl \n"
     . "\t--lib     <uvgrtp|ffmpeg|live555>\n"
     . "\t--role    <send|recv>\n"
-    . "\t--file    <test filename>\n"
+    . "\t--file    <test filename> make sure you also have the companion file\n"
     . "\t--saddr   <sender address>\n"
     . "\t--raddr   <receiver address>\n"
     . "\t--port    <used port>\n"
     . "\t--threads <# of threads>\n"
+    . "\t--srtp\n"
+    . "\t--format  <hevc/vvc> \n"
     . "\t--start   <start fps>\n"
-    . "\t--end     <end fps>\n\n";
+    . "\t--end     <end fps>\n\n"
+    . "\t--fps     <a list of individual fps values> Alternative to --start and --end\n\n"
+    . "\t--rounds  <how many times the test is run>\n\n";
 
     print "usage (latency):\n  ./benchmark.pl \n"
     . "\t--latency\n"
@@ -273,7 +277,10 @@ sub print_help {
     . "\t--saddr  <sender address>\n"
     . "\t--raddr  <receiver address>\n"
     . "\t--port   <used port>\n"
+    . "\t--srtp\n"
+    . "\t--format  <hevc/vvc> \n"
     . "\t--fps <the fps at which benchmarking is done>\n"
+    . "\t--rounds  <how many times the test is run>\n"
     . "\t--lib <uvgrtp|ffmpeg|live555>\n\n" and exit;
 }
 
@@ -283,7 +290,7 @@ GetOptions(
     "sender_addr|saddr=s"        => \(my $saddr = ""),
     "receiver_addr|raddr=s"      => \(my $raddr = ""),
     "port|p=i"                   => \(my $port = 0),
-    "iterations|iter|i=i"        => \(my $iter = 10),
+    "iterations|ite|rounds|i=i"  => \(my $iter = 10),
     "input|filename|file|in=s"   => \(my $file = ""),
     "threads|t=i"                => \(my $threads = 1),
     "start|s=f"                  => \(my $start = 0),

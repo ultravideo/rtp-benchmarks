@@ -429,9 +429,9 @@ sub print_help {
     print "usage (directory):\n  ./parse.pl \n"
     . "\t--parse <best|all|csv>\n"
     . "\t--lib <uvgrtp|ffmpeg|live555>\n"
-    . "\t--iter <# of iterations>)\n"
+    . "\t--iter <# of iterations> (not needed if correct file format)\n"
     . "\t--unit <mb|mbit|gbit> (defaults to mb)\n"
-    . "\t--filesize <size of the test file in bytes>\n"
+    . "\t--filesize <size of the test file in bytes> (use ls -l to get this, mandatory)\n"
     . "\t--packet-loss <allowed percentage of dropped packets> (optional)\n"
     . "\t--frame-loss <allowed percentage of dropped frames> (optional)\n"
     . "\t--path <path to folder with send and recv output files>\n" and exit;

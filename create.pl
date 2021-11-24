@@ -9,7 +9,7 @@ $| = 1; # autoflush
 sub print_help {
     print "usage (create):\n"  
     . "./create.pl \n"
-    . "\t--input      <filename of YUV420 file>\n"
+    . "\t--input      <filename of YUV420 file> (mandatory)\n"
     . "\t--res        <{width}x{height}>\n"
     . "\t--qp         <qp value>\n"
     . "\t--fps        <file framerate value>\n"

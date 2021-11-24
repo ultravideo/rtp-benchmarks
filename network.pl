@@ -9,9 +9,10 @@ $| = 1; # autoflush
 sub print_help {
     print "usage (network):\n"  
     . "./network.pl \n"
-    . "\t--role       <s/c>\n"
-    . "\t--address    <send or receive address>\n"
+    . "\t--role       <s/c> (mandatory)\n"
+    . "\t--address    <send or receive address> (mandatory for sender)\n"
     . "\t--port       <qp value>\n"
+    . "\t--psize      <size of tested packets>\n"
 }
 
 GetOptions(
