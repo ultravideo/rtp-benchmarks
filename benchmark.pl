@@ -225,7 +225,7 @@ sub send_latency {
         print "Latency send benchmark round $_" . "/$iter\n";
         $remote->recv($data, 16);
         
-        my $exit_code = system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp >> $result_file 2>&1");
+        my $exit_code = system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp 2>> $result_file 2>&1");
         die "Latency sender failed! \n" if ($exit_code ne 0);
     }
     print "Latency send benchmark finished\n";

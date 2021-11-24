@@ -20,6 +20,7 @@ size_t total_intra = 0;
 size_t total_inter = 0;
 
 bool vvc_headers = false;
+int total_frames_received = 0;
 
 uint64_t get_diff()
 {
@@ -46,14 +47,12 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                     frames++;
                     break;
                 case 1: // inter frame
-                {
                     diff = get_diff();
                     total += (diff / 1000);
                     total_inter += (diff / 1000);
                     ninters++;
                     frames++;
                     break;
-                }
             }
         }
         else
@@ -75,7 +74,9 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                     break;
             }
         }
+        ++total_frames_received;
     }
+
 }
 
 static int sender(std::string input_file, std::string local_address, int local_port, 
@@ -103,6 +104,8 @@ static int sender(std::string input_file, std::string local_address, int local_p
         return EXIT_FAILURE;
     }
 
+    std::cout << "Starting latency send test with " << chunk_sizes.size() << " chunks" << std::endl;
+
     uint64_t current_frame = 0;
     uint64_t period = (uint64_t)((1000 * 1000 / fps) );
     size_t offset = 0;
@@ -112,7 +115,6 @@ static int sender(std::string input_file, std::string local_address, int local_p
 
     for (auto& chunk_size : chunk_sizes)
     {
-
         // record send time
         frame_send_time = std::chrono::high_resolution_clock::now();
         if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
@@ -133,7 +135,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     }
 
     // just so we don't exit before last frame has arrived. Does not affect results
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
+    std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
 
     cleanup_uvgrtp(rtp_ctx, session, send);
 
@@ -143,6 +145,8 @@ static int sender(std::string input_file, std::string local_address, int local_p
         total_inter / (float)ninters,
         total / (float)frames
     );
+
+    std::cout << "Ending latency send test with " << total_frames_received << " frames received" << std::endl;
 
     return EXIT_SUCCESS;
 }
