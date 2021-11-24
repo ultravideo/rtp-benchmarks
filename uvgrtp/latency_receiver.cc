@@ -37,7 +37,7 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
     last_packet_arrival = std::chrono::high_resolution_clock::now();
     receive->install_receive_hook(receive, hook_receiver);
     while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - 
-        last_packet_arrival).count() > 200)
+        last_packet_arrival).count() > 500)
     {
         time_point_mutex.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
