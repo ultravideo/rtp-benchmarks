@@ -20,6 +20,8 @@ size_t total       = 0;
 size_t total_intra = 0;
 size_t total_inter = 0;
 
+bool vvc_headers = false;
+
 static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg, (void)frame;
@@ -30,18 +32,41 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
             std::chrono::high_resolution_clock::now() - frame_send_time
         ).count();
 
-        switch ((frame->payload[0] >> 1) & 0x3f) {
-            case 19:
+        if (vvc_headers)
+        {
+            switch (frame->payload[2] & 0x3f) {
+            case 19: // intra frame
                 total += (diff / 1000);
                 total_intra += (diff / 1000);
-                nintras++, frames++;
+                nintras++;
+                frames++;
                 break;
 
-            case 1:
+            case 1: // inter frame
                 total += (diff / 1000);
                 total_inter += (diff / 1000);
-                ninters++, frames++;
+                ninters++;
+                frames++;
                 break;
+            }
+        }
+        else
+        {
+            switch ((frame->payload[0] >> 1) & 0x3f) {
+                case 19: // intra frame
+                    total += (diff / 1000);
+                    total_intra += (diff / 1000);
+                    nintras++;
+                    frames++;
+                    break;
+
+                case 1: // inter frame
+                    total += (diff / 1000);
+                    total_inter += (diff / 1000);
+                    ninters++;
+                    frames++;
+                    break;
+            }
         }
 
         frame_in_transit = false;
@@ -51,6 +76,8 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
 static int sender(std::string input_file, std::string local_address, int local_port, 
     std::string remote_address, int remote_port, float fps, bool vvc_enabled, bool srtp_enabled)
 {
+    vvc_headers = vvc_enabled;
+
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
     uvgrtp::media_stream* send = nullptr;
@@ -72,7 +99,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     }
 
     uint64_t current_frame = 0;
-    uint64_t period = (uint64_t)((1000 / fps) * 1000);
+    uint64_t period = (uint64_t)((1000 * 1000 / fps) );
     size_t offset = 0;
     rtp_error_t ret = RTP_OK;
 
@@ -95,8 +122,6 @@ static int sender(std::string input_file, std::string local_address, int local_p
             cleanup_uvgrtp(rtp_ctx, session, send);
             return EXIT_FAILURE;
         }
-
-       
 
         current_frame += 1;
         offset += chunk_size;
