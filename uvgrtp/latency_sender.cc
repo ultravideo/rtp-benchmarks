@@ -7,10 +7,11 @@
 #include <cstring>
 #include <algorithm>
 #include <string>
+#include <deque>
+#include <chrono>
 
-
-std::chrono::high_resolution_clock::time_point frame_send_time;
-bool frame_in_transit = false;
+std::mutex time_mutex;
+std::deque<std::chrono::high_resolution_clock::time_point> frame_send_times;
 
 size_t frames   = 0;
 size_t ninters  = 0;
@@ -24,30 +25,33 @@ bool vvc_headers = false;
 
 static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
-    (void)arg, (void)frame;
+    (void)arg;
 
     if (frame) {
 
+        time_mutex.lock();
         uint64_t diff = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now() - frame_send_time
+            std::chrono::high_resolution_clock::now() - frame_send_times.front()
         ).count();
+        frame_send_times.pop_front();
+        time_mutex.unlock();
 
         if (vvc_headers)
         {
             switch (frame->payload[2] & 0x3f) {
-            case 19: // intra frame
-                total += (diff / 1000);
-                total_intra += (diff / 1000);
-                nintras++;
-                frames++;
-                break;
+                case 19: // intra frame
+                    total += (diff / 1000);
+                    total_intra += (diff / 1000);
+                    nintras++;
+                    frames++;
+                    break;
 
-            case 1: // inter frame
-                total += (diff / 1000);
-                total_inter += (diff / 1000);
-                ninters++;
-                frames++;
-                break;
+                case 1: // inter frame
+                    total += (diff / 1000);
+                    total_inter += (diff / 1000);
+                    ninters++;
+                    frames++;
+                    break;
             }
         }
         else
@@ -68,8 +72,6 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                     break;
             }
         }
-
-        frame_in_transit = false;
     }
 }
 
@@ -107,16 +109,11 @@ static int sender(std::string input_file, std::string local_address, int local_p
 
     for (auto& chunk_size : chunk_sizes)
     {
-        if (frame_in_transit)
-        {
-            fprintf(stderr, "Test fps is too high! Did not receive frame before sending!\n");
-            return EXIT_FAILURE;
-        }
-
-        frame_in_transit = true;
 
         // record send time
-        frame_send_time = std::chrono::high_resolution_clock::now();
+        time_mutex.lock();
+        frame_send_times.push_back(std::chrono::high_resolution_clock::now());
+        time_mutex.unlock();
         if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
             fprintf(stderr, "push_frame() failed!\n");
             cleanup_uvgrtp(rtp_ctx, session, send);
