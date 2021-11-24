@@ -32,12 +32,10 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
     intialize_uvgrtp(rtp_ctx, &session, &receive, remote_address, local_address,
         local_port, remote_port, srtp_enabled, vvc_enabled);
 
-    receive->install_receive_hook(receive, hook_receiver);
-
-    last_packet_arrival = std::chrono::high_resolution_clock::now();
-
     // the receiving end is not measured in latency tests
     time_point_mutex.lock();
+    last_packet_arrival = std::chrono::high_resolution_clock::now();
+    receive->install_receive_hook(receive, hook_receiver);
     while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - 
         last_packet_arrival).count() > 200)
     {
