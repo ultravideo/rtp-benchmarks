@@ -85,10 +85,7 @@ sub send_benchmark {
 
                 my $result_file = "$lib/results/$logname";
 
-                # remove result file if it exists
-                if(-e "./$result_file") {
-                    system("rm ./$result_file");
-                }
+                unlink $result_file if -e $result_file; # erase old results if they exist
 
                 for ((1 .. $iter)) {
                     print "Starting to benchmark sending at $fps fps, round $_\n";
@@ -142,10 +139,7 @@ sub recv_benchmark {
 
                 my $result_file = "$lib/results/$logname";
 
-                # remove result file if it exists
-                if(-e "./$result_file") {
-                    system("rm ./$result_file");
-                }
+                unlink $result_file if -e $result_file; # erase old results if they exist
 
                 for ((1 .. $iter)) {
                     print "Starting to benchmark receive at $fps fps, round $_\n";
@@ -208,7 +202,11 @@ sub send_latency {
     my ($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp) = @_;
     my ($socket, $remote, $data);
     print "Latency send benchmark for $lib\n";
-
+    
+    unless(-e "./$lib/latency_sender") {
+        die "The executable ./$lib/latency_sender has not been created! \n";
+    }
+    
     $socket = mk_ssock($saddr, $port);
     $remote = $socket->accept();
     
@@ -218,8 +216,11 @@ sub send_latency {
         $logname = "latencies_$format" . "_SRTP_$fps". "fps_$iter" . "rounds";
     }
     
-    my $result_file = "$lib/results/$logname";
 
+    
+    my $result_file = "$lib/results/$logname";
+    unlink $result_file if -e $result_file; # erase old results if they exist
+    
     for ((1 .. $iter)) {
         print "Latency send benchmark round $_" . "/$iter\n";
         $remote->recv($data, 16);
@@ -234,14 +235,18 @@ sub recv_latency {
     my ($lib, $saddr, $raddr, $port, $iter, $format, $srtp) = @_;
     print "Latency receive benchmark for $lib\n";
     
+    unless(-e "./$lib/latency_receiver") {
+        die "The executable ./$lib/latency_receiver has not been created! \n";
+    }
+    
     my $socket = mk_rsock($saddr, $port);
     
     for ((1 .. $iter)) {
         print "Latency receive benchmark round $_" . "/$iter\n";
+        sleep 2;
         $socket->send("start");
         
         system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp 2>&1 >/dev/null");
-        sleep 2;
     }
     print "Latency receive benchmark finished\n";
     $socket->close();
