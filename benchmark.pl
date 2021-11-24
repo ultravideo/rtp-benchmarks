@@ -247,7 +247,7 @@ sub recv_latency {
         sleep 1; # 1 s, make sure the sender has managed to catch up
         $socket->send("start");
         
-        my $exit_code = system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp 2>&1 >/dev/null");
+        my $exit_code = system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp");
         die "Latency receiver failed! \n" if ($exit_code ne 0);
     }
     print "Latency receive benchmark finished\n";
