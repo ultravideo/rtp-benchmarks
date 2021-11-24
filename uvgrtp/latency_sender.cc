@@ -7,11 +7,9 @@
 #include <cstring>
 #include <algorithm>
 #include <string>
-#include <deque>
 #include <chrono>
 
-std::mutex time_mutex;
-std::deque<std::chrono::high_resolution_clock::time_point> frame_send_times;
+std::chrono::high_resolution_clock::time_point frame_send_time;
 
 size_t frames   = 0;
 size_t ninters  = 0;
@@ -25,14 +23,9 @@ bool vvc_headers = false;
 
 uint64_t get_diff()
 {
-    time_mutex.lock();
-    uint64_t diff = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::high_resolution_clock::now() - frame_send_times.front()
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::high_resolution_clock::now() - frame_send_time
         ).count();
-    frame_send_times.pop_front();
-    time_mutex.unlock();
-
-    return diff;
 }
 
 static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
@@ -121,9 +114,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     {
 
         // record send time
-        time_mutex.lock();
-        frame_send_times.push_back(std::chrono::high_resolution_clock::now());
-        time_mutex.unlock();
+        frame_send_time = std::chrono::high_resolution_clock::now();
         if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
             fprintf(stderr, "push_frame() failed!\n");
             cleanup_uvgrtp(rtp_ctx, session, send);
