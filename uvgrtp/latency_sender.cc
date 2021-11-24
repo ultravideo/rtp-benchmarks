@@ -41,21 +41,20 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
 
     if (frame) {
 
+        uint64_t diff = 0;
         if (vvc_headers)
         {
             switch (frame->payload[2] & 0x3f) {
                 case 19: // intra frame
-                {
-                    uint64_t diff = get_diff();
+                    diff = get_diff();
                     total += (diff / 1000);
                     total_intra += (diff / 1000);
                     nintras++;
                     frames++;
                     break;
-                }
                 case 1: // inter frame
                 {
-                    uint64_t diff = get_diff();
+                    diff = get_diff();
                     total += (diff / 1000);
                     total_inter += (diff / 1000);
                     ninters++;
@@ -68,23 +67,19 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
         {
             switch ((frame->payload[0] >> 1) & 0x3f) {
                 case 19: // intra frame
-                {
-                    uint64_t diff = get_diff();
+                    diff = get_diff();
                     total += (diff / 1000);
                     total_intra += (diff / 1000);
                     nintras++;
                     frames++;
                     break;
-                }
                 case 1: // inter frame
-                {
-                    uint64_t diff = get_diff();
+                    diff = get_diff();
                     total += (diff / 1000);
                     total_inter += (diff / 1000);
                     ninters++;
                     frames++;
                     break;
-                }
             }
         }
     }
