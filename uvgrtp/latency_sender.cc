@@ -23,53 +23,68 @@ size_t total_inter = 0;
 
 bool vvc_headers = false;
 
+uint64_t get_diff()
+{
+    time_mutex.lock();
+    uint64_t diff = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::high_resolution_clock::now() - frame_send_times.front()
+        ).count();
+    frame_send_times.pop_front();
+    time_mutex.unlock();
+
+    return diff;
+}
+
 static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
 
     if (frame) {
 
-        time_mutex.lock();
-        uint64_t diff = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now() - frame_send_times.front()
-        ).count();
-        frame_send_times.pop_front();
-        time_mutex.unlock();
-
         if (vvc_headers)
         {
             switch (frame->payload[2] & 0x3f) {
                 case 19: // intra frame
+                {
+                    uint64_t diff = get_diff();
                     total += (diff / 1000);
                     total_intra += (diff / 1000);
                     nintras++;
                     frames++;
                     break;
-
+                }
                 case 1: // inter frame
+                {
+                    uint64_t diff = get_diff();
                     total += (diff / 1000);
                     total_inter += (diff / 1000);
                     ninters++;
                     frames++;
                     break;
+                }
             }
         }
         else
         {
             switch ((frame->payload[0] >> 1) & 0x3f) {
                 case 19: // intra frame
+                {
+                    uint64_t diff = get_diff();
                     total += (diff / 1000);
                     total_intra += (diff / 1000);
                     nintras++;
                     frames++;
                     break;
-
+                }
                 case 1: // inter frame
+                {
+                    uint64_t diff = get_diff();
                     total += (diff / 1000);
                     total_inter += (diff / 1000);
                     ninters++;
                     frames++;
                     break;
+                }
             }
         }
     }
