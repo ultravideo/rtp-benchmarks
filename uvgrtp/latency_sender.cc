@@ -10,6 +10,7 @@
 
 
 std::chrono::high_resolution_clock::time_point frame_send_time;
+bool frame_in_transit = false;
 
 size_t frames   = 0;
 size_t ninters  = 0;
@@ -42,6 +43,8 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                 ninters++, frames++;
                 break;
         }
+
+        frame_in_transit = false;
     }
 }
 
@@ -77,6 +80,14 @@ static int sender(std::string input_file, std::string local_address, int local_p
 
     for (auto& chunk_size : chunk_sizes)
     {
+        if (frame_in_transit)
+        {
+            fprintf(stderr, "Test fps is too high! Did not receive frame before sending!\n");
+            return EXIT_FAILURE;
+        }
+
+        frame_in_transit = true;
+
         // record send time
         frame_send_time = std::chrono::high_resolution_clock::now();
         if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
@@ -84,6 +95,8 @@ static int sender(std::string input_file, std::string local_address, int local_p
             cleanup_uvgrtp(rtp_ctx, session, send);
             return EXIT_FAILURE;
         }
+
+       
 
         current_frame += 1;
         offset += chunk_size;
