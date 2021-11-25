@@ -1,6 +1,6 @@
 # RTP Benchmarks
 
-This repository was created to compare the video streaming performance of uvgRTP against state-of-the-art in video streaming. The chosen libraries were Live555 and FFMpeg. Gstreamer also has the necessary features (supports HEVC RTP payload), but was omitted because there was no straightforward way to integrate its closely-knit media processing filters into this benchmark. This framework is not under active development, but simple bugs may be fixed if the feature is needed.
+This repository was created to compare the video streaming performance of uvgRTP against state-of-the-art in video streaming. The chosen libraries were Live555 and FFMpeg. Gstreamer also has the necessary features (supports HEVC RTP payload), but was omitted because there was no straightforward way to integrate its closely-knit media processing filters into this benchmark. This framework is not under active development and it can be a bit rough around the edges, but simple bugs may be fixed if the feature is needed.
 
 Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP (latency) senders and receivers. The Live555 implementation is has not been tested in a while and may not work out of the box. Linux is the only supported operating system.
 
@@ -20,7 +20,7 @@ One core of a modern CPU can easily overload the capacity of 1 Gbps network, so 
 
 ## Phase 1: Network settings (optional)
 
-In OS settings, you should increase socket write and read buffers as well as the TX and RX Queue lenghts if you intend to test high bitrate streams.
+If you intend to test a very quality stream at high fps values, you may need to increase transmit (TX) and receive (RX) queue lengths. We used value of 10000 for both. To increase the the TX queue length, issue the following command: `ifconfig <interface> txqueuelen 10000`. To increase the RX queue, issue the following command: `sysctl -w net.core.netdev_max_backlog=2000` or your system equivalent.
 
 The RTP does not mandate the packet size, but the HEVC and VVC RTP specifications recommend using smaller packets that the MTU size. While local network usually support larger packet size without IP level fragmentation, only the MTU size of 1500 is guaranteed to be supported over the internet.
 
