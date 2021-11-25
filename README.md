@@ -83,7 +83,7 @@ The benchmark is constructed in such a way that the library sends frames at spec
 
 Individual values (`--fps` parameter) or a range (`--start`, `--end` and `--step` parameters) can be used the specify the FPS values tested. Without the `--step` variable, the FPS is doubled for each test.
 
-For ffmpeg configuration, you must edit the .sdp files in ffmpeg/sdp/lan with your ip address.
+For ffmpeg configuration, you must edit the .sdp files in `ffmpeg/sdp/lan` with your ip address in the receiving end.
 
 When running the tests, start the sender first and the start will be synchronized when the receiver is started. 
 
@@ -121,6 +121,8 @@ The results can be found in the `<lib>/results` folder which is created by the b
 ### Latency benchmarking
 
 The latency benchmarks measure the round-trip latency of Intra and Inter frames as well as the overall average frame latency. Latency benchmark sends the packet from sender and the receiver sends the packet back immediately. Remember to start the sender before you start the receiver.
+
+For ffmpeg configuration, you must edit the file `ffmpeg/sdp/lan/lat_hevc` with your ip address in the receiving end.
 
 Latency sender example:
 ```

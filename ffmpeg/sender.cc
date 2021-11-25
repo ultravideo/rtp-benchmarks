@@ -28,7 +28,7 @@ void thread_func(void* mem, std::string local_address, uint16_t local_port,
     std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp,
     const std::string result_file, std::vector<uint64_t> chunk_sizes)
 {
-    char addr[64] = { 0 };
+    
     enum AVCodecID codec_id = AV_CODEC_ID_H265;
     AVCodec *codec;
     AVCodecContext *c = NULL;
@@ -67,7 +67,7 @@ void thread_func(void* mem, std::string local_address, uint16_t local_port,
     AVFormatContext* avfctx;
     AVOutputFormat* fmt = av_guess_format("rtp", NULL, NULL);
 
-    /* snprintf(addr, 64, "rtp://10.21.25.2:%d", 8888 + thread_num); */
+    char addr[64] = { 0 };
     snprintf(addr, 64, "rtp://" + remote_address.c_str() + ": % d", remote_port + thread_num*2);
     ret = avformat_alloc_output_context2(&avfctx, fmt, fmt->name, addr);
 
