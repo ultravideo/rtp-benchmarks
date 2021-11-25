@@ -83,6 +83,8 @@ The benchmark is constructed in such a way that the library sends frames at spec
 
 Individual values (`--fps` parameter) or a range (`--start`, `--end` and `--step` parameters) can be used the specify the FPS values tested. Without the `--step` variable, the FPS is doubled for each test.
 
+For ffmpeg configuration, you must edit the .sdp files in ffmpeg/sdp/lan with your ip address.
+
 When running the tests, start the sender first and the start will be synchronized when the receiver is started. 
 
 Goodput sender

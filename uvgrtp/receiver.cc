@@ -1,4 +1,5 @@
 #include "uvgrtp_util.hh"
+
 #include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
@@ -41,13 +42,12 @@ int main(int argc, char** argv)
     std::string remote_address = argv[4];
     int remote_port            = atoi(argv[5]);
 
+    int nthreads               = atoi(argv[6]);
+    bool vvc_enabled  = get_vvc_state(argv[7]);
+    bool srtp_enabled = get_srtp_state(argv[8]);
+
     std::cout << "Starting uvgRTP receiver tests. " << local_address << ":" << local_port 
         << "<-" << remote_address << ":" << remote_port << std::endl;
-
-    int nthreads = atoi(argv[6]);
-
-    bool vvc_enabled = get_vvc_state(argv[7]);
-    bool srtp_enabled = get_srtp_state(argv[8]);
 
     thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
 
