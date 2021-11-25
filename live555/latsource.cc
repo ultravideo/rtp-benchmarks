@@ -1,6 +1,10 @@
+#include "latsource.hh"
+
+#include "../util/util.hh"
+
 #include <GroupsockHelper.hh>
 #include <FramedSource.hh>
-#include "latsource.hh"
+
 #include <chrono>
 #include <mutex>
 #include <queue>
@@ -9,8 +13,6 @@
 EventTriggerId H265LatencyFramedSource::eventTriggerId = 0;
 unsigned H265LatencyFramedSource::referenceCount       = 0;
 
-extern void *get_mem(int, char **, size_t&);
-extern int get_next_frame_start(uint8_t *, uint32_t, uint32_t, uint8_t&);
 
 static uint8_t *buf;
 static size_t offset    = 0;
@@ -76,7 +78,7 @@ static std::pair<size_t, uint8_t *> find_next_nal(void)
     static uint8_t *nal_end   = NULL;
 
     if (!p) {
-        p   = (uint8_t *)get_mem(0, NULL, len);
+        p   = (uint8_t *)get_mem(input_file_, len);
         end = p + len;
         len = 0;
 
@@ -97,14 +99,14 @@ static std::pair<size_t, uint8_t *> find_next_nal(void)
     return ret;
 }
 
-H265LatencyFramedSource *H265LatencyFramedSource::createNew(UsageEnvironment& env, std::mutex& lat_mtx)
+H265LatencyFramedSource *H265LatencyFramedSource::createNew(UsageEnvironment& env, std::string input_file)
 {
-    return new H265LatencyFramedSource(env, lat_mtx);
+    return new H265LatencyFramedSource(env, input_file);
 }
 
-H265LatencyFramedSource::H265LatencyFramedSource(UsageEnvironment& env, std::mutex& lat_mtx):
+H265LatencyFramedSource::H265LatencyFramedSource(UsageEnvironment& env, std::string input_file):
     FramedSource(env),
-    mtx_(lat_mtx)
+    input_file_(input_file)
 {
     period = (uint64_t)((1000 / (float)30) * 1000);
 

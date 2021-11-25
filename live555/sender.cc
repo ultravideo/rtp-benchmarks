@@ -5,6 +5,7 @@
 #include "H265VideoStreamDiscreteFramer.hh"
 
 #include <cstdlib>
+#include <iostream>
 
 int main(int argc, char **argv)
 {
@@ -24,18 +25,12 @@ int main(int argc, char **argv)
 
     int nthreads = atoi(argv[7]);
     int fps = atoi(argv[8]);
-    std::string format = argv[9];
-    std::string srtp = argv[10];
+    bool vvc_enabled = get_vvc_state(argv[9]);
+    bool srtp_enabled = get_srtp_state(argv[10]);
 
-    if (format != "hevc" && format != "h265")
+    if (vvc_enabled || srtp_enabled)
     {
-        std::cerr << "Unsupported LIVE555 sender format: " << format << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    if (srtp == "1" || srtp == "yes" || srtp == "y")
-    {
-        std::cerr << "LIVE555 does not support SRTP" << std::endl;
+        std::cerr << "Unsupported option for Live555 tester" << std::endl;
         return EXIT_FAILURE;
     }
     

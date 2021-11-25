@@ -7,25 +7,25 @@
 
 int main(int argc, char **argv)
 {
-    (void)argc, (void)argv;
-
-    if (argc != 8) {
-        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <result file> <local address> <local port> <remote address> <remote port> \
             <number of threads> <format> <srtp>\n", __FILE__);
         return EXIT_FAILURE;
     }
 
-    std::string local_address = argv[1];
-    int local_port = atoi(argv[2]);
-    std::string remote_address = argv[3];
-    int remote_port = atoi(argv[4]);
+    result_filename = argv[1];
+    std::string local_address = argv[2];
+    int local_port = atoi(argv[3]);
+    std::string remote_address = argv[4];
+    int remote_port = atoi(argv[5]);
 
-    int nThreads = atoi(argv[5]);
-    std::string format = argv[6];
+    int nthreads = atoi(argv[6]);
+    bool vvc_enabled = get_vvc_state(argv[7]);
+    bool srtp_enabled = get_srtp_state(argv[8]);
 
-    if (format != "hevc" && format != "h265")
+    if (vvc_enabled || srtp_enabled)
     {
-        std::cerr << "Unsupported Live555 receiver format: " << format << std::endl;
+        std::cerr << "Unsupported option for Live555 tester" << std::endl;
         return EXIT_FAILURE;
     }
 

@@ -1,3 +1,5 @@
+#include "../util/util.hh"
+
 #include <BasicUsageEnvironment.hh>
 #include <FramedSource.hh>
 #include <GroupsockHelper.hh>
@@ -23,9 +25,6 @@ using namespace std::chrono;
 
 EventTriggerId H265LatencyFramedSource::eventTriggerId = 0;
 unsigned H265LatencyFramedSource::referenceCount       = 0;
-
-extern void* get_mem(std::string filename, size_t& len);
-extern int get_next_frame_start(uint8_t *, uint32_t, uint32_t, uint8_t&);
 
 static uint64_t current = 0;
 static uint64_t period  = 0;
@@ -90,7 +89,7 @@ const uint8_t *ff_avc_find_startcode(const uint8_t *p, const uint8_t *end)
     return out;
 }
 
-static std::pair<size_t, uint8_t *> find_next_nal(void)
+static std::pair<size_t, uint8_t *> find_next_nal(std::string input_file)
 {
     static size_t len         = 0;
     static uint8_t *p         = NULL;
@@ -99,7 +98,7 @@ static std::pair<size_t, uint8_t *> find_next_nal(void)
     static uint8_t *nal_end   = NULL;
 
     if (!p) {
-        p   = (uint8_t *)get_mem("test_file.hevc", len);
+        p   = (uint8_t *)get_mem(input_file, len);
         end = p + len;
         len = 0;
 
@@ -120,13 +119,14 @@ static std::pair<size_t, uint8_t *> find_next_nal(void)
     return ret;
 }
 
-H265LatencyFramedSource *H265LatencyFramedSource::createNew(UsageEnvironment& env)
+H265LatencyFramedSource *H265LatencyFramedSource::createNew(UsageEnvironment& env, std::string input_file)
 {
-    return new H265LatencyFramedSource(env);
+    return new H265LatencyFramedSource(env, input_file);
 }
 
-H265LatencyFramedSource::H265LatencyFramedSource(UsageEnvironment& env):
-    FramedSource(env)
+H265LatencyFramedSource::H265LatencyFramedSource(UsageEnvironment& env, std::string input_file):
+    FramedSource(env),
+    input_file_(input_file)
 {
     period = (uint64_t)((1000 / (float)30) * 1000);
 
@@ -162,7 +162,7 @@ void H265LatencyFramedSource::deliverFrame()
     if (!isCurrentlyAwaitingData())
         return;
 
-    auto nal = find_next_nal();
+    auto nal = find_next_nal(input_file_);
 
     if (!nal.first || !nal.second)
         return;
@@ -340,7 +340,8 @@ Boolean RTPSink_::continuePlaying()
     return True;
 }
 
-static int sender(char *addr)
+static int sender(std::string input_file, std::string local_address, int local_port,
+    std::string remote_address, int remote_port)
 {
     (void)addr;
 
@@ -357,20 +358,20 @@ static int sender(char *addr)
 
     OutPacketBuffer::maxSize = 40 * 1000 * 1000;
 
-    Port send_port(8888);
+    Port send_port(remote_port);
     struct in_addr dst_addr;
-    dst_addr.s_addr = our_inet_addr("10.21.25.2");
+    dst_addr.s_addr = our_inet_addr(remote_address.c_str());
 
-    Port recv_port(8889);
+    Port recv_port(local_port);
     struct in_addr src_addr;
-    src_addr.s_addr = our_inet_addr("0.0.0.0");
+    src_addr.s_addr = our_inet_addr(local_address.c_str());
 
     Groupsock send_socket(*env, dst_addr, send_port, 255);
     Groupsock recv_socket(*env, src_addr, recv_port, 255);
 
     /* sender */
     videoSink    = H265VideoRTPSink::createNew(*env, &send_socket, 96);
-    framedSource = H265LatencyFramedSource::createNew(*env);
+    framedSource = H265LatencyFramedSource::createNew(*env, input_file);
     framer       = H265VideoStreamDiscreteFramer::createNew(*env, framedSource);
 
     /* receiver */
@@ -387,7 +388,21 @@ static int sender(char *addr)
 
 int main(int argc, char **argv)
 {
-    (void)argc, (void)argv;
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <input file> <local address> <local port> <remote address> <remote port> <fps> <format> <srtp> \n", __FILE__);
+        return EXIT_FAILURE;
+    }
 
-    return sender(argv[2]);
+    std::string input_file = argv[1];
+
+    std::string local_address = argv[2];
+    int local_port = atoi(argv[3]);
+    std::string remote_address = argv[4];
+    int remote_port = atoi(argv[5]);
+
+    float fps = atof(argv[6]);
+    bool vvc_enabled = get_vvc_state(argv[7]);
+    bool srtp_enabled = get_srtp_state(argv[8]);
+
+    return sender(input_file, local_address, local_port, remote_address, remote_port);
 }

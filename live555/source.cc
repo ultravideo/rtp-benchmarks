@@ -92,7 +92,7 @@ static std::pair<size_t, uint8_t *> find_next_nal(const std::string& input_file)
 
     nal_end    = (uint8_t *)ff_avc_find_startcode(nal_start, end);
     auto ret   = std::make_pair((size_t)(nal_end - nal_start), (uint8_t *)nal_start);
-    len       += 4 + nal_end - nal_start;
+    len       += nal_end - nal_start;
     nal_start  = nal_end;
 
     return ret;
