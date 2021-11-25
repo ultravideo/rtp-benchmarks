@@ -209,7 +209,8 @@ void H265FramedSource::deliverFrame()
     FramedSource::afterGetting(this);
 }
 
-static int receiver(void)
+static int receiver(std::string local_address, int local_port, 
+    std::string remote_address, int remote_port)
 {
     H265VideoStreamDiscreteFramer *framer;
     TaskScheduler *scheduler;
@@ -226,15 +227,15 @@ static int receiver(void)
     lat_mtx.lock();
 
     /* receiver */
-    addr.s_addr = our_inet_addr("0.0.0.0");
-    Groupsock recv_sock(*env, addr, Port(8888), 255);
+    addr.s_addr = our_inet_addr(local_address.c_str());
+    Groupsock recv_sock(*env, addr, Port(local_port), 255);
 
     source = H265VideoRTPSource::createNew(*env, &recv_sock, 96);
     sink   = new RTPLatencySink(*env);
 
     /* sender */
-    addr.s_addr = our_inet_addr("10.21.25.200");
-    Groupsock send_socket(*env, addr, Port(8889), 255);
+    addr.s_addr = our_inet_addr(remote_address.c_str());
+    Groupsock send_socket(*env, addr, Port(remote_port), 255);
 
     framedSource = H265FramedSource::createNew(*env, 30);
     framer       = H265VideoStreamDiscreteFramer::createNew(*env, framedSource);
@@ -249,7 +250,18 @@ static int receiver(void)
 
 int main(int argc, char **argv)
 {
-    (void)argc, (void)argv;
+    if (argc != 7) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <format> <srtp>\n", __FILE__);
+        return EXIT_FAILURE;
+    }
 
-    return receiver();
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+    bool vvc_enabled = get_vvc_state(argv[5]);
+    bool srtp_enabled = get_srtp_state(argv[6]);
+
+    return receiver(local_address, local_port, remote_address, remote_port);
 }

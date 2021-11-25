@@ -1,3 +1,5 @@
+#include "../util/util.hh"
+
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -13,21 +15,30 @@ extern "C" {
 #include <atomic>
 #include <chrono>
 #include <thread>
-
-extern void *get_mem(int argc, char **argv, size_t& len);
+#include <cstdlib>
+#include <string>
+#include <iostream>
 
 #define WIDTH  3840
 #define HEIGHT 2160
 
 std::atomic<int> nready(0);
 
-void thread_func(void *mem, size_t len, char *addr_, int thread_num, double fps, bool strict)
+void thread_func(void* mem, std::string local_address, uint16_t local_port,
+    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp,
+    const std::string result_file, std::vector<uint64_t> chunk_sizes)
 {
-    char addr[64] = { 0 };
+    
     enum AVCodecID codec_id = AV_CODEC_ID_H265;
     AVCodec *codec;
     AVCodecContext *c = NULL;
-    int i, ret, x, y, got_output;
+
+    int i;
+    int ret;
+    int x;
+    int y;
+    int got_output;
+
     AVFrame *frame;
     AVPacket pkt;
 
@@ -56,8 +67,8 @@ void thread_func(void *mem, size_t len, char *addr_, int thread_num, double fps,
     AVFormatContext* avfctx;
     AVOutputFormat* fmt = av_guess_format("rtp", NULL, NULL);
 
-    /* snprintf(addr, 64, "rtp://10.21.25.2:%d", 8888 + thread_num); */
-    snprintf(addr, 64, "rtp://127.0.0.1:%d", 8888 + thread_num);
+    char addr[64] = { 0 };
+    snprintf(addr, 64, "rtp://%s: %d", remote_address.c_str(), remote_port + thread_num*2);
     ret = avformat_alloc_output_context2(&avfctx, fmt, fmt->name, addr);
 
     avio_open(&avfctx->pb, avfctx->filename, AVIO_FLAG_WRITE);
@@ -73,53 +84,38 @@ void thread_func(void *mem, size_t len, char *addr_, int thread_num, double fps,
 
     (void)avformat_write_header(avfctx, NULL);
 
-    uint64_t chunk_size, total_size;
-    uint64_t fpt_ms  = 0;
-    uint64_t fsize   = 0;
-    uint32_t frames  = 0;
-    uint64_t diff    = 0;
-	uint64_t current = 0;
+    uint64_t chunk_size = 0;
+	uint64_t current_frame = 0;
 	uint64_t period  = (uint64_t)((1000 / (float)fps) * 1000);
-	
+    size_t bytes_sent = 0;
+
 	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-    for (size_t rounds = 0; rounds < 1; ++rounds) {
-        for (size_t i = 0; i < len; ) {
-            memcpy(&chunk_size, (uint8_t *)mem + i, sizeof(uint64_t));
+    for (auto& chunk_size : chunk_sizes)
+    {
+        av_init_packet(&pkt);
+        pkt.data = (uint8_t*)mem + bytes_sent;
+        pkt.size = chunk_size;
 
-            i          += sizeof(uint64_t);
-            total_size += chunk_size;
+        av_interleaved_write_frame(avfctx, &pkt);
+        av_packet_unref(&pkt);
 
-            av_init_packet(&pkt);
-            pkt.data = (uint8_t *)mem + i;
-            pkt.size = chunk_size;
+        ++current_frame;
+        bytes_sent += chunk_size;
 
-            av_interleaved_write_frame(avfctx, &pkt);
-            av_packet_unref(&pkt);
-			
-            auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::high_resolution_clock::now() - start
+        auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now() - start
             ).count();
-			
-			if (runtime < current * period)
-				std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
 
-            frames++;
-			current++;
-            i += chunk_size;
-            fsize += chunk_size;
-        }
+        if (runtime < current_frame * period)
+            std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
     }
-    diff = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::high_resolution_clock::now() - start
-    ).count();
 
-    fprintf(stderr, "%lu bytes, %lu kB, %lu MB took %lu ms %lu s\n",
-        fsize, fsize / 1000, fsize / 1000 / 1000,
-        diff, diff / 1000
-    );
+    auto end = std::chrono::high_resolution_clock::now();
+    uint64_t diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-end:
+    write_send_results_to_file(result_file, bytes_sent, diff);
+
     nready++;
 
     avcodec_close(c);
@@ -130,31 +126,62 @@ end:
 
 int main(int argc, char **argv)
 {
-    if (argc != 5) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads> <fps> <mode>\n", __FILE__);
-        return -1;
+    if (argc != 11) {
+        fprintf(stderr, "usage: ./%s <input file> <result file> <local address> <local port> <remote address> <remote port> \
+            <number of threads> <fps> <format> <srtp> \n", __FILE__);
+        return EXIT_FAILURE;
     }
+
+    std::string input_file = argv[1];
+    std::string result_file = argv[2];
+
+    std::string local_address = argv[3];
+    int local_port = atoi(argv[4]);
+    std::string remote_address = argv[5];
+    int remote_port = atoi(argv[6]);
+
+    int nthreads = atoi(argv[7]);
+    int fps = atoi(argv[8]);
+    bool vvc_enabled = get_vvc_state(argv[9]);
+    bool srtp_enabled = get_srtp_state(argv[10]);
+
+    std::cout << "Starting FFMpeg sender tests. " << local_address << ":" << local_port
+        << "->" << remote_address << ":" << remote_port << std::endl;
 
     avcodec_register_all();
     av_register_all();
     avformat_network_init();
 
     size_t len   = 0;
-    void *mem    = get_mem(0, NULL, len);
-    int nthreads = atoi(argv[2]);
-    bool strict  = !strcmp(argv[4], "strict");
-    std::thread **threads = (std::thread **)malloc(sizeof(std::thread *) * nthreads);
+    void *mem    = get_mem(input_file, len);
 
-    for (int i = 0; i < nthreads; ++i)
-        threads[i] = new std::thread(thread_func, mem, len, argv[1], i * 2, atof(argv[3]), strict);
+    std::vector<uint64_t> chunk_sizes;
+    get_chunk_sizes(get_chunk_filename(input_file), chunk_sizes);
 
-    while (nready.load() != nthreads)
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    if (mem == nullptr || chunk_sizes.empty())
+    {
+        std::cerr << "Failed to get file: " << input_file << std::endl;
+        std::cerr << "or chunk location file: " << get_chunk_filename(input_file) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::vector<std::thread*> threads;
 
     for (int i = 0; i < nthreads; ++i) {
-        threads[i]->join();
-        delete threads[i];
+        threads.push_back(new std::thread(thread_func, mem, local_address, local_port, remote_address,
+            remote_port, i, fps, vvc_enabled, srtp_enabled, result_file, chunk_sizes));
     }
-    free(threads);
 
+    for (unsigned int i = 0; i < threads.size(); ++i) {
+        if (threads[i]->joinable())
+        {
+            threads[i]->join();
+        }
+        delete threads[i];
+        threads[i] = nullptr;
+    }
+
+    threads.clear();
+
+    return EXIT_SUCCESS;
 }

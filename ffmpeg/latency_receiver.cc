@@ -1,3 +1,5 @@
+#include "../util/util.hh"
+
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -21,7 +23,6 @@ extern void *get_mem(int argc, char **argv, size_t& len);
 #define WIDTH  3840
 #define HEIGHT 2160
 #define FPS     200
-#define SLEEP     8
 
 std::chrono::high_resolution_clock::time_point fs, fe;
 std::atomic<bool> received(false);
@@ -31,7 +32,7 @@ struct ffmpeg_ctx {
     AVFormatContext *receiver;
 };
 
-static ffmpeg_ctx *init_ffmpeg(const char *ip)
+static ffmpeg_ctx *init_ffmpeg(std::string remote_address, int remote_port)
 {
     avcodec_register_all();
     av_register_all();
@@ -68,8 +69,9 @@ static ffmpeg_ctx *init_ffmpeg(const char *ip)
         c->pix_fmt, 32);
 
     AVOutputFormat *fmt = av_guess_format("rtp", NULL, NULL);
-
-    ret = avformat_alloc_output_context2(&ctx->sender, fmt, fmt->name, "rtp://10.21.25.200:8889");
+    char addr[64] = { 0 };
+    snprintf(addr, 64, "rtp://%s: %d", remote_address.c_str(), remote_port);
+    ret = avformat_alloc_output_context2(&ctx->sender, fmt, fmt->name, addr);
 
     avio_open(&ctx->sender->pb, ctx->sender->filename, AVIO_FLAG_WRITE);
 
@@ -157,10 +159,10 @@ static ffmpeg_ctx *init_ffmpeg(const char *ip)
 
     ctx->receiver->flags = AVFMT_FLAG_NONBLOCK;
 
-    if (!strcmp(ip, "127.0.0.1"))
-        snprintf(buf, sizeof(buf), "ffmpeg/sdp/localhost/hevc_0.sdp");
+    if (!strcmp(remote_address.c_str(), "127.0.0.1"))
+        snprintf(buf, sizeof(buf), "ffmpeg/sdp/localhost/lat_hevc.sdp");
     else
-        snprintf(buf, sizeof(buf), "ffmpeg/sdp/lan/hevc_0.sdp");
+        snprintf(buf, sizeof(buf), "ffmpeg/sdp/lan/lat_hevc.sdp");
 
     if (avformat_open_input(&ctx->receiver, buf, NULL, &d_r) != 0) {
         fprintf(stderr, "nothing found!\n");
@@ -181,13 +183,12 @@ static ffmpeg_ctx *init_ffmpeg(const char *ip)
     return ctx;
 }
 
-static int receiver(void)
+static int receiver(std::string remote_address, int remote_port)
 {
     AVPacket pkt;
     ffmpeg_ctx *ctx;
-    std::string addr("10.21.25.200");
 
-    if (!(ctx = init_ffmpeg(addr.c_str())))
+    if (!(ctx = init_ffmpeg(remote_address.c_str(), remote_port)))
         return EXIT_FAILURE;
 
     av_init_packet(&pkt);
@@ -202,7 +203,18 @@ static int receiver(void)
 
 int main(int argc, char **argv)
 {
-    (void)argc, (void)argv;
+    if (argc != 7) {
+        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+            <format> <srtp>\n", __FILE__);
+        return EXIT_FAILURE;
+    }
 
-    return receiver();
+    std::string local_address = argv[1];
+    int local_port = atoi(argv[2]);
+    std::string remote_address = argv[3];
+    int remote_port = atoi(argv[4]);
+    bool vvc_enabled = get_vvc_state(argv[5]);
+    bool srtp_enabled = get_srtp_state(argv[6]);
+
+    return receiver(remote_address, remote_port);
 }

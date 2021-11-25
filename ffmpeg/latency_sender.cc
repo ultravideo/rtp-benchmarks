@@ -1,3 +1,5 @@
+#include "../util/util.hh"
+
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -20,12 +22,11 @@ extern "C" {
 
 using namespace std::chrono;
 
-extern void *get_mem(int argc, char **argv, size_t& len);
+extern void* get_mem(std::string filename, size_t& len);
 
 #define WIDTH  3840
 #define HEIGHT 2160
 #define FPS      30
-#define SLEEP     8
 
 std::chrono::high_resolution_clock::time_point fs, fe;
 std::atomic<bool> ready(false);
@@ -41,7 +42,7 @@ struct ffmpeg_ctx {
     AVFormatContext *receiver;
 };
 
-static ffmpeg_ctx *init_ffmpeg(const char *ip)
+static ffmpeg_ctx *init_ffmpeg(std::string remote_address, int remote_port)
 {
     avcodec_register_all();
     av_register_all();
@@ -79,7 +80,9 @@ static ffmpeg_ctx *init_ffmpeg(const char *ip)
 
     AVOutputFormat *fmt = av_guess_format("rtp", NULL, NULL);
 
-    ret = avformat_alloc_output_context2(&ctx->sender, fmt, fmt->name, "rtp://10.21.25.2:8888");
+    char addr[64] = { 0 };
+    snprintf(addr, 64, "rtp://%s: %d", remote_address.c_str(), remote_port);
+    ret = avformat_alloc_output_context2(&ctx->sender, fmt, fmt->name, addr);
 
     avio_open(&ctx->sender->pb, ctx->sender->filename, AVIO_FLAG_WRITE);
 
@@ -171,7 +174,7 @@ static ffmpeg_ctx *init_ffmpeg(const char *ip)
 
     ctx->receiver->flags = AVFMT_FLAG_NONBLOCK;
 
-    if (!strcmp(ip, "127.0.0.1"))
+    if (!strcmp(remote_address.c_str(), "127.0.0.1"))
         snprintf(buf, sizeof(buf), "ffmpeg/sdp/localhost/lat_hevc.sdp");
     else
         snprintf(buf, sizeof(buf), "ffmpeg/sdp/lan/lat_hevc.sdp");
@@ -248,36 +251,35 @@ static void receiver(ffmpeg_ctx *ctx)
     ready = true;
 }
 
-static int sender(void)
+static int sender(std::string input_file, std::string remote_address, int remote_port)
 {
     size_t len = 0;
-    void *mem  = get_mem(0, NULL, len);
+    void *mem  = get_mem(input_file, len);
 
-    std::string addr("10.21.25.2");
-    ffmpeg_ctx *ctx = init_ffmpeg(addr.c_str());
+    std::vector<uint64_t> chunk_sizes;
+    get_chunk_sizes(get_chunk_filename(input_file), chunk_sizes);
+
+    ffmpeg_ctx *ctx = init_ffmpeg(remote_address, remote_port);
 
     (void)new std::thread(receiver, ctx);
 
-    uint64_t chunk_size = 0;
-    uint64_t diff       = 0;
-    uint64_t counter    = 0;
-    uint64_t total      = 0;
-    uint64_t current    = 0;
+    uint64_t current_frame    = 0;
     uint64_t key        = 0;
     uint64_t period     = (uint64_t)((1000 / (float)FPS) * 1000);
+
+    uint64_t offset = 0;
 
     AVPacket pkt;
 	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-    for (size_t i = 0; i < len; ) {
-        memcpy(&chunk_size, (uint8_t *)mem + i, sizeof(uint64_t));
-
+    for (auto& chunk_size : chunk_sizes)
+    {
         /* Start code lookup/merging of small packets causes the incoming frame size
          * to differ quite significantly from "chunk_size" */
-        if (!i)
+        if (!offset)
+        {
             ff_key = chunk_size;
-
-        i += sizeof(uint64_t);
+        }
 
         if (timestamps.find(chunk_size) != timestamps.end()) {
             fprintf(stderr, "cannot use %zu for key!\n", chunk_size);
@@ -288,32 +290,49 @@ static int sender(void)
         timestamps2.push_back(std::chrono::high_resolution_clock::now());
 
         av_init_packet(&pkt);
-        pkt.data = (uint8_t *)mem + i;
+        pkt.data = (uint8_t*)mem + offset;
         pkt.size = chunk_size;
 
         av_interleaved_write_frame(ctx->sender, &pkt);
         av_packet_unref(&pkt);
 
+        current_frame++;
+        offset += chunk_size;
+
         auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - start
-        ).count();
+            ).count();
 
-        if (runtime < current * period)
-            std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
-
-        current++;
-        i += chunk_size;
+        if (runtime < current_frame * period)
+            std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
     }
 
     while (!ready.load())
-        ;
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+        
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv)
 {
-    (void)argc, (void)argv;
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <input file> <local address> <local port> <remote address> <remote port> <fps> <format> <srtp> \n", __FILE__);
+        return EXIT_FAILURE;
+    }
 
-    return sender();
+    std::string input_file = argv[1];
+
+    std::string local_address = argv[2];
+    int local_port = atoi(argv[3]);
+    std::string remote_address = argv[4];
+    int remote_port = atoi(argv[5]);
+
+    float fps = atof(argv[6]);
+    bool vvc_enabled = get_vvc_state(argv[7]);
+    bool srtp_enabled = get_srtp_state(argv[8]);
+
+    return sender(input_file, remote_address, remote_port);
 }

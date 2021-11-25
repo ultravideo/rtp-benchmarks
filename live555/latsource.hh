@@ -1,15 +1,14 @@
-#ifndef __h265_framed_source_h__
-#define __h265_framed_source_h__
+#pragma once
 
 #include <FramedSource.hh>
 
 class H265LatencyFramedSource : public FramedSource {
     public:
-        static H265LatencyFramedSource *createNew(UsageEnvironment& env);
+        static H265LatencyFramedSource *createNew(UsageEnvironment& env, std::string input_file);
         static EventTriggerId eventTriggerId;
 
     protected:
-        H265LatencyFramedSource(UsageEnvironment& env);
+        H265LatencyFramedSource(UsageEnvironment& env, std::string input_file);
         virtual ~H265LatencyFramedSource();
 
     private:
@@ -18,6 +17,6 @@ class H265LatencyFramedSource : public FramedSource {
         static void deliverFrame0(void *clientData);
 
         static unsigned referenceCount;
-};
 
-#endif /* __h265_framed_source_h__ */
+        std::string input_file_;
+};

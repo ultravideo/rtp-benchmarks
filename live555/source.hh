@@ -1,11 +1,13 @@
-#ifndef __h265_framed_source_h__
-#define __h265_framed_source_h__
+#pragma once
 
 #include <FramedSource.hh>
 
+#include <string>
+
 class H265FramedSource: public FramedSource {
 public:
-  static H265FramedSource *createNew(UsageEnvironment& env, unsigned fps);
+  static H265FramedSource *createNew(UsageEnvironment& env, unsigned fps, 
+      std::string input_file, std::string result_file);
 
 public:
   static EventTriggerId eventTriggerId;
@@ -15,7 +17,7 @@ public:
   void deliver_frame();
 
 protected:
-  H265FramedSource(UsageEnvironment& env, unsigned fps);
+  H265FramedSource(UsageEnvironment& env, unsigned fps, std::string input_file, std::string result_file);
   // called only by createNew(), or by subclass constructors
   virtual ~H265FramedSource();
 
@@ -31,6 +33,7 @@ private:
 private:
   static unsigned referenceCount; // used to count how many instances of this class currently exist
   unsigned fps_;
-};
 
-#endif /* __h265_framed_source_h__ */
+  std::string input_file_;
+  std::string result_file_;
+};

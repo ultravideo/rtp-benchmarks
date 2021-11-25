@@ -1,3 +1,5 @@
+#include "../util/util.hh"
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -9,6 +11,11 @@ extern "C" {
 #include <cstdio>
 #include <chrono>
 #include <thread>
+#include <cstdlib>
+#include <iostream>
+
+#define SETUP_FFMPEG_PARAMETERS
+
 
 struct thread_info {
     size_t pkts;
@@ -37,7 +44,8 @@ static int cb(void *ctx)
 
 static const AVIOInterruptCB int_cb = { cb, NULL };
 
-void thread_func(char *addr, int thread_num)
+void thread_func(int thread_num, int nthreads, std::string local_address, int local_port,
+    std::string remote_address, int remote_port, bool vvc, bool srtp)
 {
     AVFormatContext *format_ctx = avformat_alloc_context();
     AVCodecContext *codec_ctx = NULL;
@@ -61,7 +69,7 @@ void thread_func(char *addr, int thread_num)
     snprintf(buf, sizeof(buf), "%d", 40 * 1000 * 1000);
     av_dict_set(&d, "buffer_size", buf, 32);
 
-#if 1
+#ifdef SETUP_FFMPEG_PARAMETERS
     snprintf(buf, sizeof(buf), "%d", 10000000);
     av_dict_set(&d, "max_delay", buf, 32);
 
@@ -103,10 +111,10 @@ void thread_func(char *addr, int thread_num)
     av_dict_set(&d, "rw_timeout", buf, 32);
 #endif
 
-    if (!strcmp(addr, "127.0.0.1"))
-        snprintf(buf, sizeof(buf), "ffmpeg/sdp/localhost/hevc_%d.sdp", thread_num / 2);
+    if (!strcmp(local_address.c_str(), "127.0.0.1"))
+        snprintf(buf, sizeof(buf), "ffmpeg/sdp/localhost/hevc_%d.sdp", nthreads);
     else
-        snprintf(buf, sizeof(buf), "ffmpeg/sdp/lan/hevc_%d.sdp", thread_num / 2);
+        snprintf(buf, sizeof(buf), "ffmpeg/sdp/lan/hevc_%d.sdp", nthreads);
 
     if (avformat_open_input(&format_ctx, buf, NULL, &d)) {
         fprintf(stderr, "failed to open input file\n");
@@ -162,17 +170,48 @@ void thread_func(char *addr, int thread_num)
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
-        fprintf(stderr, "usage: ./%s <remote address> <number of threads>\n", __FILE__);
-        return -1;
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <result file> <local address> <local port> <remote address> <remote port> \
+            <number of threads> <format> <srtp>\n", __FILE__);
+        return EXIT_FAILURE;
     }
 
-    int nthreads = atoi(argv[2]);
+    std::string result_filename = argv[1];
+    std::string local_address = argv[2];
+    int local_port = atoi(argv[3]);
+    std::string remote_address = argv[4];
+    int remote_port = atoi(argv[5]);
+
+    int nthreads = atoi(argv[6]);
+    bool vvc_enabled = get_vvc_state(argv[7]);
+    bool srtp_enabled = get_srtp_state(argv[8]);
+
     thread_info  = (struct thread_info *)calloc(nthreads, sizeof(*thread_info));
 
+    std::vector<std::thread*> threads = {};
+
+    for (int i = 0; i < nthreads; ++i) {
+        threads.push_back(new std::thread(thread_func, i, nthreads, local_address, local_port,
+            remote_address, remote_port, vvc_enabled, srtp_enabled));
+    }
+
+    // wait all the thread executions to end and delete them
+    for (int i = 0; i < nthreads; ++i) {
+        if (threads[i]->joinable())
+        {
+            threads[i]->join();
+        }
+        delete threads[i];
+        threads[i] = nullptr;
+    }
+
+    /*
     for (int i = 0; i < nthreads; ++i)
         new std::thread(thread_func, argv[1], i * 2);
 
     while (nready.load() != nthreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    */
+    return EXIT_SUCCESS;
 }

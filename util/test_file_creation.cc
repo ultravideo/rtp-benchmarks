@@ -1,17 +1,22 @@
 #include <kvazaar.h>
 
+#include "util.hh"
+
 #include <iostream>
 #include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 
 #include <stdlib.h>
 
 
-int kvazaar_encode(const std::string& input, const std::string& output, 
+int kvazaar_encode(const std::string& input, const std::string& output, const std::string& memory_filename,
     int width, int height, int qp, int fps, int period, std::string& preset);
 
-void cleanup(FILE* inputFile, FILE* outputFile);
+bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, std::ofstream& memoryFile,
+    const kvz_api* api, kvz_encoder* enc);
+void cleanup_kvazaar(kvz_picture* input, const kvz_api* api, kvz_encoder* enc, kvz_config* config);
 
 int main(int argc, char** argv)
 {
@@ -22,13 +27,15 @@ int main(int argc, char** argv)
 
     std::string input_file = argv[1];
     std::string output_file = argv[1];
-
+    
     // remove any possible file extensions and add hevc
     size_t lastindex = input_file.find_last_of(".");
     if (lastindex != std::string::npos)
     {
         output_file = input_file.substr(0, lastindex);
     }
+
+    std::string mem_file = get_chunk_filename(input_file);
 
     // add hevc file ending
     output_file = output_file + ".hevc";
@@ -53,25 +60,57 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    return kvazaar_encode(input_file, output_file, width, height, qp, fps, intra_period, preset);
+    return kvazaar_encode(input_file, output_file, mem_file, width, height, qp, fps, intra_period, preset);
 }
 
-int kvazaar_encode(const std::string& input, const std::string& output, 
+int kvazaar_encode(const std::string& input, const std::string& output, const std::string& memory_filename,
     int width, int height, int qp, int fps, int period, std::string& preset)
 {
-    std::cout << "Opening files. Input: " << input << " output: " << output << std::endl;
-    FILE* inputFile = fopen(input.c_str(), "r");
-    FILE* outputFile = fopen(output.c_str(), "w");
+    std::cout << "Opening files. Input: " << input << " Output: " << output << std::endl;
+    std::cout << "Parameters. Res: " << width << "x" << height << " fps: " << fps << " qp: " << qp << std::endl;
 
-    if (inputFile == NULL || outputFile == NULL)
+    std::ifstream inputFile (input,  std::ios::in  | std::ios::binary);
+    std::ofstream outputFile(output, std::ios::out | std::ios::binary);
+    std::ofstream memoryFile(memory_filename, std::ios::out | std::ios::binary);
+
+    if (!inputFile.good())
     {
-        std::cerr << "Failed to open input or output file!" << std::endl;
-        cleanup(inputFile, outputFile);
+        if (inputFile.eof())
+        {
+            std::cerr << "Input eof before starting" << std::endl;
+        }
+        else if (inputFile.bad())
+        {
+            std::cerr << "Input bad before starting" << std::endl;
+        }
+        else if (inputFile.fail())
+        {
+            std::cerr << "Input fail before starting" << std::endl;
+        }
+
+        return EXIT_FAILURE;
+    }
+
+    if (!outputFile.good() || !memoryFile.good())
+    {
+        if (outputFile.eof() || memoryFile.eof())
+        {
+            std::cerr << "Output eof before starting" << std::endl;
+        }
+        else if (outputFile.bad() || memoryFile.bad())
+        {
+            std::cerr << "Output bad before starting" << std::endl;
+        }
+        else if (outputFile.fail() || memoryFile.fail())
+        {
+            std::cerr << "Output fail before starting" << std::endl;
+        }
+
         return EXIT_FAILURE;
     }
 
     kvz_encoder* enc = NULL;
-    const kvz_api* const api = kvz_api_get(8);
+    const kvz_api* api = kvz_api_get(8);
     kvz_config* config = api->config_alloc();
     api->config_init(config);
     api->config_parse(config, "preset", preset.c_str());
@@ -84,102 +123,136 @@ int kvazaar_encode(const std::string& input, const std::string& output,
     config->framerate_denom = 1;
 
     enc = api->encoder_open(config);
-    if (!enc) {
+    kvz_picture* img_in = api->picture_alloc(width, height);
+
+    if (!enc || !img_in) {
         std::cerr << "Failed to open kvazaar encoder!" << std::endl;
-        cleanup(inputFile, outputFile);
+        inputFile.close();
+        outputFile.close();
+        memoryFile.close();
+        cleanup_kvazaar(img_in, api, enc, config);
         return EXIT_FAILURE;
     }
 
-    kvz_picture* img_in[16];
-    for (uint32_t i = 0; i < 16; ++i) {
-        img_in[i] = api->picture_alloc_csp(KVZ_CSP_420, width, height);
-    }
+    int frame_count = 1;
+    bool input_has_been_read = false;
 
-    uint8_t inputCounter = 0;
-    uint8_t outputCounter = 0;
-    bool done = false;
-    /* int r = 0; */
+    while (!input_has_been_read) {
 
-    std::cout << "Start creating the HEVC benchmark file" << std::endl;
+        if (!inputFile.read((char*)img_in->y, width * height) ||
+            !inputFile.read((char*)img_in->u, width * height/4) ||
+            !inputFile.read((char*)img_in->v, width * height/4)) {
 
-    while (!done) {
-        kvz_data_chunk* chunks_out = NULL;
-        kvz_picture* img_rec = NULL;
-        kvz_picture* img_src = NULL;
-        uint32_t len_out = 0;
-        kvz_frame_info info_out;
+            if (inputFile.eof())
+            {
+                std::cout << "End of input file reached" << std::endl;
+            }
+            else if (inputFile.bad())
+            {
+                std::cerr << "Input bad" << std::endl;
+            }
+            else if (inputFile.fail())
+            {
+                std::cerr << "Input fails" << std::endl;
+            }
+            else
+            {
+                std::cerr << "Unknown Input error" << std::endl;
+            }
 
-        if (!fread(img_in[inputCounter]->y, width * height, 1, inputFile)) {
-            done = true;
+            input_has_been_read = true;
+            inputFile.close();
             continue;
         }
-        if (!fread(img_in[inputCounter]->u, width * height >> 2, 1, inputFile)) {
-            done = true;
-            continue;
-        }
-        if (!fread(img_in[inputCounter]->v, width * height >> 2, 1, inputFile)) {
-            done = true;
-            continue;
-        }
 
-        if (!api->encoder_encode(enc,
-            img_in[inputCounter],
-            &chunks_out, &len_out, &img_rec, &img_src, &info_out))
+        std::cout << "Start encoding frame " << frame_count << std::endl;
+        ++frame_count;
+
+        // feed input to kvazaar and write output to file
+        int rvalue = EXIT_FAILURE;
+        if (!encode_frame(img_in, rvalue, outputFile, memoryFile, api, enc))
         {
-            fprintf(stderr, "Failed to encode image.\n");
-            for (uint32_t i = 0; i < 16; i++) {
-                api->picture_free(img_in[i]);
-            }
-            cleanup(inputFile, outputFile);
-            return EXIT_FAILURE;
-        }
-        inputCounter = (inputCounter + 1) % 16;
-
-
-        if (chunks_out == NULL && img_in == NULL) {
-            // We are done since there is no more input and output left.
-            cleanup(inputFile, outputFile);
-            std::cout << "Finished creating the HEVC benchmark file" << std::endl;
-            return EXIT_SUCCESS;
-        }
-
-        if (chunks_out != NULL) {
-            uint64_t written = 0;
-
-            // Write data into the output file.
-            for (kvz_data_chunk* chunk = chunks_out; chunk != NULL; chunk = chunk->next) {
-                written += chunk->len;
-            }
-
-            fprintf(stderr, "write chunk size: %lu\n", written);
-            fwrite(&written, sizeof(uint64_t), 1, outputFile);
-            for (kvz_data_chunk* chunk = chunks_out; chunk != NULL; chunk = chunk->next) {
-                fwrite(chunk->data, chunk->len, 1, outputFile);
-            }
-
-            outputCounter = (outputCounter + 1) % 16;
-
-            /* if (++r > 5) */
-            /*     goto cleanup; */
+            // if encoding fails
+            outputFile.close();
+            memoryFile.close();
+            cleanup_kvazaar(img_in, api, enc, config);
+            return rvalue;
         }
     }
 
-    std::cout << "Finished creating the HEVC benchmark file" << std::endl;
+    // write the rest of the frames that are being encoded to file
+    int rvalue = EXIT_FAILURE;
+    while (encode_frame(nullptr, rvalue, outputFile, memoryFile, api, enc));
 
-    cleanup(inputFile, outputFile);
-
-    return EXIT_SUCCESS;
+    memoryFile.close();
+    outputFile.close();
+    cleanup_kvazaar(img_in, api, enc, config);
+    return rvalue;
 }
 
-void cleanup(FILE* inputFile, FILE* outputFile)
+void cleanup_kvazaar(kvz_picture* input, const kvz_api* api, kvz_encoder* enc, kvz_config* config)
 {
-    if (inputFile)
+    if (api)
     {
-        fclose(inputFile);
+        if (enc)
+        {
+            api->encoder_close(enc);
+        }
+
+        if (config)
+        {
+            api->config_destroy(config);
+        }
+
+        if (input)
+        {
+            api->picture_free(input);
+        }
+    }
+}
+
+bool encode_frame(kvz_picture* input, int& rvalue, std::ofstream& outputFile, std::ofstream& memoryFile, 
+    const kvz_api* api, kvz_encoder* enc)
+{
+    kvz_picture* img_rec = nullptr;
+    kvz_picture* img_src = nullptr;
+    uint32_t len_out = 0;
+    kvz_frame_info info_out;
+    kvz_data_chunk* chunks_out = nullptr;
+
+    if (!api->encoder_encode(enc, input, &chunks_out, &len_out, &img_rec, &img_src, &info_out))
+    {
+        fprintf(stderr, "Failed to encode image.\n");
+        for (uint32_t i = 0; i < 16; i++) {
+            api->picture_free(input);
+        }
+        rvalue = EXIT_FAILURE;
+        return false;
     }
 
-    if (outputFile)
-    {
-        fclose(outputFile);
+    if (chunks_out == nullptr && input == nullptr) {
+        // We are done since there is no more input or output left.
+        rvalue = EXIT_SUCCESS;
+        return false;
     }
+
+    if (chunks_out != NULL) {
+        uint64_t written = 0;
+
+        // Calculate the total size of the chunks
+        for (kvz_data_chunk* chunk = chunks_out; chunk != nullptr; chunk = chunk->next) {
+            written += chunk->len;
+        }
+
+        std::cout << "Write the size of the chunk: " << written << std::endl;
+        memoryFile.write((char*)(&written), sizeof(uint64_t));
+
+        // write the chunks into the file
+        for (kvz_data_chunk* chunk = chunks_out; chunk != nullptr; chunk = chunk->next) {
+
+            outputFile.write((char*)(chunk->data), chunk->len);
+        }
+    }
+
+    return true;
 }

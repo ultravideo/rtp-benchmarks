@@ -8,9 +8,9 @@ $| = 1; # autoflush
 
 sub print_help {
     print "usage (create):\n"  
-	. "./create.pl \n"
-    . "\t--input      <filename of YUV420 file>\n"
-	. "\t--res        <{width}x{height}>\n"
+    . "./create.pl \n"
+    . "\t--input      <filename of YUV420 file> (mandatory)\n"
+    . "\t--res        <{width}x{height}>\n"
     . "\t--qp         <qp value>\n"
     . "\t--fps        <file framerate value>\n"
     . "\t--intra      <intra period>\n"
@@ -18,20 +18,20 @@ sub print_help {
 }
 
 GetOptions(
-	"input|i=s"             => \(my $filename = ""),
-	"resolution|res=s"      => \(my $resolution = ""),
-    "quantization|qp=i"     => \(my $qp = 27),
-	"framerate|fps=i"       => \(my $fps = 30),
-	"intra-period|intra=i"  => \(my $period = 64),
-	"preset=s"              => \(my $preset = "medium"),
-    "help"                  => \(my $help = 0)
+    "input|file|filename|i=s" => \(my $filename = ""),
+    "resolution|res=s"        => \(my $resolution = "3840x2160"),
+    "quantization|qp=i"       => \(my $qp = 27),
+    "framerate|fps=i"         => \(my $fps = 30),
+    "intra-period|intra=i"    => \(my $period = 64),
+    "preset|pre=s"            => \(my $preset = "ultrafast"),
+    "help"                    => \(my $help = 0)
 ) or die "failed to parse command line!\n";
 
-print_help() if $help or !$filename or !$resolution;
+print_help() if $help or !$filename;
 
 # check that parameters make sense
 die "" if $help;
-die "please specify input file and resolution!" if !$filename or !$resolution;
+die "please specify input file with --input" if !$filename;
 die "invalid preset" if !grep (/$preset/, ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"));
 
 die "check resolution format, for example: --res 3840x2160\n" if $resolution !~ /([\d]+)x([\d]+)/;
@@ -44,5 +44,9 @@ my $height = $2;
 system "make test_file_creation"; 
 
  # run file creation
-system ("./test_file_creation $filename $width $height $qp $fps $period $preset");
+my $exit_code = system ("./test_file_creation $filename $width $height $qp $fps $period $preset");
 
+if($exit_code!=0)
+{
+  die "Failed to run file creator.\n";
+}
