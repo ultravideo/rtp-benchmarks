@@ -2,7 +2,7 @@
 
 This repository was created to compare the video streaming performance of uvgRTP against state-of-the-art in video streaming. The chosen libraries were Live555 and FFMpeg. Gstreamer also has the necessary features (supports HEVC RTP payload), but was omitted because there was no straightforward way to integrate its closely-knit media processing filters into this benchmark. This framework is not under active development and it can be a bit rough around the edges, but simple bugs may be fixed if the feature is needed.
 
-Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP (latency) senders and receivers. The Live555 implementation is has not been tested in a while and may not work out of the box. Linux is the only supported operating system.
+Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP (latency) senders and receivers. The FFmpeg and Live555 implementations have has not been tested in a while and may not work out of the box. Linux is the only supported operating system.
 
 The benchmarking includes four phases: 1) Network settings (`network.pl`), 2) file creation (`create.pl`), 3) running the benchmarks (`benchmark.pl`) and 4) parsing the results into a CSV file (`parse.pl`). All scripts print their options with the `--help` parameter.
 
