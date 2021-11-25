@@ -111,7 +111,7 @@ void thread_func(int thread_num, int nthreads, std::string local_address, int lo
     av_dict_set(&d, "rw_timeout", buf, 32);
 #endif
 
-    if (!strcmp(addr, "127.0.0.1"))
+    if (!strcmp(local_address.c_str(), "127.0.0.1"))
         snprintf(buf, sizeof(buf), "ffmpeg/sdp/localhost/hevc_%d.sdp", nthreads);
     else
         snprintf(buf, sizeof(buf), "ffmpeg/sdp/lan/hevc_%d.sdp", nthreads);
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    result_filename = argv[1];
+    std::string result_filename = argv[1];
     std::string local_address = argv[2];
     int local_port = atoi(argv[3]);
     std::string remote_address = argv[4];

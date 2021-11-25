@@ -81,7 +81,7 @@ static ffmpeg_ctx *init_ffmpeg(std::string remote_address, int remote_port)
     AVOutputFormat *fmt = av_guess_format("rtp", NULL, NULL);
 
     char addr[64] = { 0 };
-    snprintf(addr, 64, "rtp://" + remote_address.c_str() + ": % d", remote_port);
+    snprintf(addr, 64, "rtp://%s: %d", remote_address.c_str(), remote_port);
     ret = avformat_alloc_output_context2(&ctx->sender, fmt, fmt->name, addr);
 
     avio_open(&ctx->sender->pb, ctx->sender->filename, AVIO_FLAG_WRITE);
@@ -304,7 +304,7 @@ static int sender(std::string input_file, std::string remote_address, int remote
             ).count();
 
         if (runtime < current_frame * period)
-            std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
+            std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
     }
 
     while (!ready.load())

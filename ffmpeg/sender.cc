@@ -68,7 +68,7 @@ void thread_func(void* mem, std::string local_address, uint16_t local_port,
     AVOutputFormat* fmt = av_guess_format("rtp", NULL, NULL);
 
     char addr[64] = { 0 };
-    snprintf(addr, 64, "rtp://" + remote_address.c_str() + ": % d", remote_port + thread_num*2);
+    snprintf(addr, 64, "rtp://%s: %d", remote_address.c_str(), remote_port + thread_num*2);
     ret = avformat_alloc_output_context2(&avfctx, fmt, fmt->name, addr);
 
     avio_open(&avfctx->pb, avfctx->filename, AVIO_FLAG_WRITE);
@@ -108,7 +108,7 @@ void thread_func(void* mem, std::string local_address, uint16_t local_port,
             ).count();
 
         if (runtime < current_frame * period)
-            std::this_thread::sleep_for(std::chrono::microseconds(current * period - runtime));
+            std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
     }
 
     auto end = std::chrono::high_resolution_clock::now();
