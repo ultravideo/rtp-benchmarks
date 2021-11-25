@@ -89,7 +89,6 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
     size_t bytes_sent = 0;
     uint64_t current_frame = 0;
     uint64_t period = (uint64_t)((1000 / (float)fps) * 1000);
-    size_t offset = 0;
     rtp_error_t ret = RTP_OK;
 
     // start the sending test
@@ -97,7 +96,7 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
 
     for (auto& chunk_size : chunk_sizes)
     {
-        if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
+        if ((ret = send->push_frame((uint8_t*)mem + bytes_sent, chunk_size, 0)) != RTP_OK) {
 
             fprintf(stderr, "push_frame() failed!\n");
 
@@ -108,8 +107,8 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
             return;
         }
 
-        offset += chunk_size;
         bytes_sent += chunk_size;
+        current_frame += 1;
 
         auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - start
@@ -118,7 +117,6 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
         // this enforces the fps restriction by waiting until it is time to send next frame
         // if this was eliminated, the test would be just about sending as fast as possible.
         // if the library falls behind, it is allowed to catch up if it can do it.
-        current_frame += 1;
         if (runtime < current_frame * period)
             std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
     }
