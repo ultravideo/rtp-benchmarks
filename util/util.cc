@@ -120,7 +120,6 @@ int get_next_frame_start(uint8_t *data, uint32_t offset, uint32_t data_len, uint
     return -1;
 }
 
-
 void write_send_results_to_file(const std::string& filename, 
     const size_t bytes, const uint64_t diff)
 {
@@ -130,6 +129,17 @@ void write_send_results_to_file(const std::string& filename,
     result_file.open(filename, std::ios::out | std::ios::app | std::ios::ate);
     result_file << bytes << " bytes, " << bytes / 1000 << " kB, " << bytes / 1000000 << " MB took "
         << diff << " ms " << diff / 1000 << " s" << std::endl;
+    result_file.close();
+}
+
+void write_receive_results_to_file(const std::string& filename,
+    const size_t bytes, const size_t packets, const uint64_t diff_ms)
+{
+    std::cout << "Writing receive results into file: " << filename << std::endl;
+
+    std::ofstream result_file;
+    result_file.open(filename, std::ios::out | std::ios::app | std::ios::ate);
+    result_file << bytes << " " << packets << " " << diff_ms;
     result_file.close();
 }
 

@@ -20,6 +20,8 @@ struct thread_info {
 std::atomic<int> nready(0);
 std::atomic<int> frames_received(0);
 
+std::string result_filename = "";
+
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame);
 
 void receiver_thread(int thread_num, int nthreads, std::string local_address, int local_port,
@@ -27,24 +29,25 @@ void receiver_thread(int thread_num, int nthreads, std::string local_address, in
 
 int main(int argc, char** argv)
 {
-    if (argc != 8) {
-        fprintf(stderr, "usage: ./%s <local address> <local port> <remote address> <remote port> \
+    if (argc != 9) {
+        fprintf(stderr, "usage: ./%s <result file> <local address> <local port> <remote address> <remote port> \
             <number of threads> <format> <srtp>\n", __FILE__);
         return EXIT_FAILURE;
     }
 
-    std::string local_address = argv[1];
-    int local_port            = atoi(argv[2]);
-    std::string remote_address = argv[3];
-    int remote_port            = atoi(argv[4]);
+    result_filename           = argv[1];
+    std::string local_address = argv[2];
+    int local_port            = atoi(argv[3]);
+    std::string remote_address = argv[4];
+    int remote_port            = atoi(argv[5]);
 
     std::cout << "Starting uvgRTP receiver tests. " << local_address << ":" << local_port 
         << "<-" << remote_address << ":" << remote_port << std::endl;
 
-    int nthreads = atoi(argv[5]);
+    int nthreads = atoi(argv[6]);
 
-    bool vvc_enabled = get_vvc_state(argv[6]);
-    bool srtp_enabled = get_srtp_state(argv[7]);
+    bool vvc_enabled = get_vvc_state(argv[7]);
+    bool srtp_enabled = get_srtp_state(argv[8]);
 
     thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
 
@@ -146,11 +149,11 @@ void hook(void* arg, uvgrtp::frame::rtp_frame* frame)
     ++frames_received; // so we detect a possible timeout
 
     if (thread_info[tid].pkts == EXPECTED_FRAMES) {
-        fprintf(stderr, "%zu %zu %lu\n", thread_info[tid].bytes, thread_info[tid].pkts,
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                thread_info[tid].last - thread_info[tid].start
-                ).count()
-        );
+
+        write_receive_results_to_file(result_filename, 
+            thread_info[tid].bytes, thread_info[tid].pkts,
+            std::chrono::duration_cast<std::chrono::milliseconds>( 
+                thread_info[tid].last - thread_info[tid].start).count());
         nready++;
     }
 }

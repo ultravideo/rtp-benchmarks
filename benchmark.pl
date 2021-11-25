@@ -145,7 +145,7 @@ sub recv_benchmark {
                     print "Starting to benchmark receive at $fps fps, round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
-                    my $exit_code = system ("(time ./$lib/receiver $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
+                    my $exit_code = system ("(time ./$lib/receiver $result_file $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
                     die "Receiver failed! \n" if ($exit_code ne 0);
                 }
             }
