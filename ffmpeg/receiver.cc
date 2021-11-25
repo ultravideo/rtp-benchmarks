@@ -10,6 +10,7 @@ extern "C" {
 #include <chrono>
 #include <thread>
 #include <cstdlib>
+#include <iostream>
 
 #define SETUP_FFMPEG_PARAMETERS
 

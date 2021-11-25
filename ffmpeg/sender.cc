@@ -17,6 +17,7 @@ extern "C" {
 #include <thread>
 #include <cstdlib>
 #include <string>
+#include <iostream>
 
 #define WIDTH  3840
 #define HEIGHT 2160
