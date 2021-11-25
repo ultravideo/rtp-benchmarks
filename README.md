@@ -2,17 +2,17 @@
 
 This repository was created to compare the video streaming performance of uvgRTP against state-of-the-art in video streaming. The chosen libraries were Live555 and FFMpeg. Gstreamer also has the necessary features (supports HEVC RTP payload), but was omitted because there was no straightforward way to integrate its closely-knit media processing filters into this benchmark. This framework is not under active development and it can be a bit rough around the edges, but simple bugs may be fixed if the feature is needed.
 
-Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP (latency) senders and receivers. The FFmpeg and Live555 implementations have has not been tested in a while and may not work out of the box. Linux is the only supported operating system.
+Directories [uvgrtp](uvgrtp), [ffmpeg](ffmpeg), and [live555](live555) contain the C++ implementations for RTP goodput/latency senders and receivers. A Makefile is used to automatically build each program from scripts. The FFmpeg and Live555 implementations have has not been tested in a while and may not work out of the box. Linux is the only supported operating system.
 
-The benchmarking includes four phases: 1) Network settings (`network.pl`), 2) file creation (`create.pl`), 3) running the benchmarks (`benchmark.pl`) and 4) parsing the results into a CSV file (`parse.pl`). All scripts print their options with the `--help` parameter.
+The benchmarking includes four phases: 1) Network settings (`network.pl`), 2) file creation (`create.pl`), 3) running the benchmarks (`benchmark.pl`) and 4) parsing the results into a summary (`parse.pl`). All scripts print their options with the `--help` parameter.
 
 ## Requirements
 
-* (kvazaar)[https://github.com/ultravideo/kvazaar] (required for generating the HEVC test file with `create.pl` script)
+* [kvazaar](https://github.com/ultravideo/kvazaar) (required for generating the HEVC test file with `create.pl` script)
 * A raw YUV420 video file (you can find sequences here: http://ultravideo.fi/#testsequences)
-* uvgRTP (optional)
-* Live555 (optional)
-* FFmpeg (optional)
+* [uvgRTP](https://github.com/ultravideo/uvgRTP) (optional)
+* [Live555](http://www.live555.com/) (optional)
+* [FFmpeg](https://ffmpeg.org/) (optional)
 
 ## Notes on used hardware
 
@@ -20,7 +20,7 @@ One core of a modern CPU can easily overload the capacity of 1 Gbps network, so 
 
 ## Phase 1: Network settings (optional)
 
-If you intend to test a very quality stream at high fps values, you may need to increase transmit (TX) and receive (RX) queue lengths. We used value of 10000 for both. To increase the the TX queue length, issue the following command: `ifconfig <interface> txqueuelen 10000`. To increase the RX queue, issue the following command: `sysctl -w net.core.netdev_max_backlog=2000` or your system equivalent.
+If you intend to test a very quality stream at high fps values, you may need to increase transmit (TX) and receive (RX) queue lengths. We used value of 10000 for both. To increase the the TX queue length, issue the following command: `ifconfig <interface> txqueuelen 10000`. To increase the RX queue, issue the following command: `sysctl -w net.core.netdev_max_backlog=10000` or your system equivalent.
 
 The RTP does not mandate the packet size, but the HEVC and VVC RTP specifications recommend using smaller packets that the MTU size. While local network usually support larger packet size without IP level fragmentation, only the MTU size of 1500 is guaranteed to be supported over the internet.
 
@@ -83,7 +83,7 @@ The benchmark is constructed in such a way that the library sends frames at spec
 
 Individual values (`--fps` parameter) or a range (`--start`, `--end` and `--step` parameters) can be used the specify the FPS values tested. Without the `--step` variable, the FPS is doubled for each test.
 
-For ffmpeg configuration, you must edit the .sdp files in `ffmpeg/sdp/lan` with your ip address in the receiving end.
+For FFmpeg configuration, you must modify the .sdp files in `ffmpeg/sdp/lan` to use your ip address in the receiving end.
 
 When running the tests, start the sender first and the start will be synchronized when the receiver is started. 
 
@@ -122,7 +122,7 @@ The results can be found in the `<lib>/results` folder which is created by the b
 
 The latency benchmarks measure the round-trip latency of Intra and Inter frames as well as the overall average frame latency. Latency benchmark sends the packet from sender and the receiver sends the packet back immediately. Remember to start the sender before you start the receiver.
 
-For ffmpeg configuration, you must edit the file `ffmpeg/sdp/lan/lat_hevc` with your ip address in the receiving end.
+For FFmpeg configuration, you must modify the file `ffmpeg/sdp/lan/lat_hevc.sdp` to use your ip address in the receiving end.
 
 Latency sender example:
 ```
@@ -178,8 +178,8 @@ Latencies takes in just one file at a time in `--path` parameter. This is how yo
     --parse=latency
 ```
 
-## Papers
+## Paper
 
-A version of this framework has been used in the following [paper](https://researchportal.tuni.fi/en/publications/open-source-rtp-library-for-high-speed-4k-hevc-video-streaming):
+This framework was originally introduced in the following [paper](https://researchportal.tuni.fi/en/publications/open-source-rtp-library-for-high-speed-4k-hevc-video-streaming):
 
 ```A. Altonen, J. Räsänen, J. Laitinen, M. Viitanen, and J. Vanne, “Open-Source RTP Library for High-Speed 4K HEVC Video Streaming”, in Proc. IEEE Int. Workshop on Multimedia Signal Processing, Tampere, Finland, Sept. 2020.```
