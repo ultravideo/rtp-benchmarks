@@ -35,8 +35,6 @@ int main(int argc, char** argv)
         output_file = input_file.substr(0, lastindex);
     }
 
-    std::string mem_file = get_chunk_filename(input_file);
-
     // add hevc file ending
     output_file = output_file + ".hevc";
 
@@ -44,6 +42,8 @@ int main(int argc, char** argv)
     {
         output_file = "out_" + output_file;
     }
+
+    std::string mem_file = get_chunk_filename(output_file);
 
     int width = atoi(argv[2]);
     int height = atoi(argv[3]);
