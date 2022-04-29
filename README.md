@@ -20,13 +20,13 @@ One core of a modern CPU can easily overload the capacity of 1 Gbps network, so 
 
 ## Phase 1: Network settings (optional)
 
-If you intend to test a very quality stream at high fps values, you may need to increase transmit (TX) and receive (RX) queue lengths. We used value of 10000 for both. To increase the the TX queue length, issue the following command: `ifconfig <interface> txqueuelen 10000`. To increase the RX queue, issue the following command: `sysctl -w net.core.netdev_max_backlog=10000` or your system equivalent.
+If you intend to test a high quality stream at high fps values, you may need to increase transmit (TX) and receive (RX) queue lengths. We used value of 10000 for both. To increase the the TX queue length, issue the following command: `ifconfig <interface> txqueuelen 10000`. To increase the RX queue, issue the following command: `sysctl -w net.core.netdev_max_backlog=10000` or your system equivalent.
 
-The RTP does not mandate the packet size, but the HEVC and VVC RTP specifications recommend using smaller packets that the MTU size. While local network usually support larger packet size without IP level fragmentation, only the MTU size of 1500 is guaranteed to be supported over the internet.
+The RTP does not mandate the packet size, but the HEVC and VVC RTP specifications recommend using smaller packets than the MTU size. While local network usually support larger packet size without IP level fragmentation, only the MTU size of 1500 is guaranteed to be supported over the internet.
 
-This corresponds to using the RTP packet size of 1458. The problem in tests with using smaller packet size is that the LAN will no achieve the same performance as with larger frames (our 10 Gbps LAN achieved 5.64 Gbps performance). 
+This corresponds to using the RTP packet size of 1458. The problem in tests with using smaller packet size is that the LAN will not be able to achieve the same performance as with larger frames (our 10 Gbps LAN achieved 5.64 Gbps performance). 
 
-This repository includes a test script called `network.pl` to test the maximal network performance on any packet size. This script is not mandatory for running the tests, but can help you desing the best test setup for your situation.
+For this reason, this repository includes a test script called `network.pl` to test the maximal network performance on any packet size. This script is not mandatory for running the tests, but can help you design the most suitable test setup for your situation.
 
 To run the network sender:
 ```
@@ -71,7 +71,7 @@ In order to run the benchmarking, an encoded HEVC file as well as a support file
 
 `--input` is the only mandatory parameter.
 
-There used to be a way to create a VVC file for testing, but due to unfortunate circumstances the script was lost. The VVC support needs a new script that would go through an existing VVC file and record the sizes of frames as 64-bit unsigned integers. The filename should follow format: `<vvc video file name>.m<extension>`. Since the VVC RTP format is very close to HEVC RTP format, they behave very similarly. If you however need to test the VVC performance, the script can be recreated.
+There used to be a way to create a VVC file for testing, but due to unfortunate circumstances the script was lost. The VVC support needs a new script that would go through an existing VVC file and record the sizes of frames as 64-bit unsigned integers. The filename should follow format: `<vvc video file name>.m<extension>`. Since the VVC RTP format is very close to HEVC RTP format, they should behave very similarly.
 
 ## Phase 3: Running the benchmarks
 
