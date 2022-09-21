@@ -11,6 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <atomic>
+#include <chrono>
 
 struct thread_info {
     size_t pkts;
@@ -136,10 +137,9 @@ void hook(void* arg, uvgrtp::frame::rtp_frame* frame)
         );
         nready++;
 
-        while (true) {
-            std::cerr << "Receiver test failed!" << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
+        std::cerr << "Receiver test failed!" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        return;
     }
 
     thread_info[tid].last = std::chrono::high_resolution_clock::now();
