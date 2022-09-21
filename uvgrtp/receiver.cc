@@ -10,6 +10,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <atomic>
 
 struct thread_info {
     size_t pkts;
