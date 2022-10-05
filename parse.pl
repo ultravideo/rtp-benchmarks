@@ -135,7 +135,7 @@ sub parse_recv {
         $tb_avg += ($a_b / $threads);
         $tt_avg += ($a_t / $threads);
 
-        # $line = <$fh> if grep /Command/, $line;
+        $line = <$fh> if grep /Command/, $line;
 
         my ($usr, $sys, $total, $cpu) = ($line =~ m/(\d+\.\d+)user\s(\d+\.\d+)system\s0:(\d+.\d+)elapsed\s(\d+)%CPU/);
 
