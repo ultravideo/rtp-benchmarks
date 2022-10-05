@@ -54,7 +54,7 @@ void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrt
     /* Here UDP send/recv buffers are increased to 40MB
      * and frame delay is set 150 milliseconds to allow frames to arrive a little late */
     (*mStream)->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
-    (*mStream)->configure_ctx(RCC_RING_BUFFER_SIZE, 8 * 1000 * 1000);
+    //(*mStream)->configure_ctx(RCC_RING_BUFFER_SIZE, 8 * 1000 * 1000);
     (*mStream)->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
 }
 
