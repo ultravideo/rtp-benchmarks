@@ -5,6 +5,7 @@ use strict;
 use IO::Socket;
 use IO::Socket::INET;
 use Getopt::Long;
+use Time::HiRes;
 
 $| = 1; # autoflush
 
@@ -142,6 +143,7 @@ sub recv_benchmark {
                 unlink $result_file if -e $result_file; # erase old results if they exist
 
                 for ((1 .. $iter)) {
+                    Time::HiRes::sleep(0.1); # sleep so packets from previous test don't interfere
                     print "Starting to benchmark receive at $fps fps, round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
