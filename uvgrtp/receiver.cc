@@ -100,7 +100,7 @@ void receiver_thread(int thread_num, int nthreads, std::string local_address, in
                 previous_packets = frames_received.load();
                 last_update = std::chrono::high_resolution_clock::now();
             }
-            else if (last_update + std::chrono::milliseconds(2000) <= std::chrono::high_resolution_clock::now())
+            else if (last_update + std::chrono::milliseconds(200) <= std::chrono::high_resolution_clock::now())
             {
                 //std::cerr << "uvgRTP receiver timed out. No packets received for 2 s. Received "
                 //    << thread_info[tid].pkts << " frames in total" << std::endl;
