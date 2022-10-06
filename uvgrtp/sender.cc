@@ -12,7 +12,7 @@
 #include <vector>
 
 void sender_thread(void* mem, std::string local_address, uint16_t local_port,
-    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, 
+    std::string remote_address, uint16_t remote_port, int thread_num, int fps, bool vvc, bool srtp, 
     const std::string result_file, std::vector<uint64_t> chunk_sizes);
 
 int main(int argc, char **argv)
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 }
 
 void sender_thread(void* mem, std::string local_address, uint16_t local_port,
-    std::string remote_address, uint16_t remote_port, int thread_num, double fps, bool vvc, bool srtp, 
+    std::string remote_address, uint16_t remote_port, int thread_num, int fps, bool vvc, bool srtp, 
     const std::string result_file, std::vector<uint64_t> chunk_sizes)
 {
     uvgrtp::context rtp_ctx;
@@ -84,11 +84,13 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
     uint16_t thread_remote_port = remote_port + thread_num * 2;
 
     intialize_uvgrtp(rtp_ctx, &session, &send, remote_address, local_address,
-        thread_local_port, thread_remote_port, srtp, vvc);
+        thread_local_port, thread_remote_port, srtp, vvc, false);
+
+    send->configure_ctx(RCC_FPS_NUMERATOR, fps);
 
     size_t bytes_sent = 0;
     uint64_t current_frame = 0;
-    uint64_t period = (uint64_t)((1000 / (float)fps) * 1000);
+    uint64_t period = (uint64_t)((1000 / (double)fps) * 1000);
     rtp_error_t ret = RTP_OK;
 
     // start the sending test

@@ -11,9 +11,14 @@ constexpr int EXPECTED_FRAMES = 602;
 
 void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrtp::media_stream** mStream,
     std::string remote_address, std::string local_address, uint16_t local_port, uint16_t remote_port, 
-    bool srtp, bool vvc)
+    bool srtp, bool vvc, bool optimize_latency)
 {
-    int flags = RCE_PACE_FRAGMENT_SENDING;
+    int flags = RCE_NO_FLAGS;
+
+    if (!optimize_latency)
+    {
+        flags |= RCE_PACE_FRAGMENT_SENDING;
+    }
 
     if (srtp)
     {
@@ -54,8 +59,9 @@ void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrt
     /* Here UDP send/recv buffers are increased to 40MB
      * and frame delay is set 150 milliseconds to allow frames to arrive a little late */
     (*mStream)->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
-    //(*mStream)->configure_ctx(RCC_RING_BUFFER_SIZE, 8 * 1000 * 1000);
+    (*mStream)->configure_ctx(RCC_RING_BUFFER_SIZE, 8 * 1000 * 1000);
     (*mStream)->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
+    (*mStream)->configure_ctx(RCC_PKT_MAX_DELAY, 100);
 }
 
 void cleanup_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session* session, uvgrtp::media_stream* mStream)
