@@ -77,6 +77,10 @@ There used to be a way to create a VVC file for testing, but due to unfortunate 
 
 This framework offers benchmarking for goodput (framerate) and latency.
 
+### Installing uvgRTP
+
+You should run cmake for uvgRTP with `-DDISABLE_PRINTS=1` parameter so prints don't interfere with the benchmark parsing.
+
 ### Goodput benchmarking
 
 The benchmark is constructed in such a way that the library sends frames at specified FPS values, repeating each test number of times. This benchmark run is analyzed for timing, goodput and CPU usage as well as for lost frames. This is used to find the point at which the library cannot keep up with the exceeding fps values. This test can also be ran at multiple simultanous threads.
