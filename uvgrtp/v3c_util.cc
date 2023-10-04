@@ -30,10 +30,10 @@ bool mmap_v3c_file(char* cbuf, uint64_t len, v3c_file_map &mmap)
 
     // First byte is the file header
     uint8_t first_byte = cbuf[ptr];
-    std::cout << "First byte " << uint32_t(first_byte) << std::endl;
+    //std::cout << "First byte " << uint32_t(first_byte) << std::endl;
     uint8_t v3c_size_precision = (first_byte >> 5) + 1;
-    std::cout << "V3C size precision: " << (uint32_t)v3c_size_precision << std::endl;
-    std::cout << std::endl;
+    //std::cout << "V3C size precision: " << (uint32_t)v3c_size_precision << std::endl;
+    //std::cout << std::endl;
     ++ptr;
 
     uint8_t* v3c_size = new uint8_t[v3c_size_precision];
@@ -53,27 +53,27 @@ bool mmap_v3c_file(char* cbuf, uint64_t len, v3c_file_map &mmap)
             combined_v3c_size = combineBytes(v3c_size[0], v3c_size[1], v3c_size[2]);
         }
         else {
-            std::cout << "Error " << std::endl;
+            std::cout << "Error (v3c_util) " << std::endl;
             return EXIT_FAILURE;
         }
         // Inside v3c unit now
-        std::cout << "Current V3C unit location " << ptr << ", size " << combined_v3c_size << std::endl;
+        //std::cout << "Current V3C unit location " << ptr << ", size " << combined_v3c_size << std::endl;
         uint64_t v3c_ptr = ptr;
 
         // Next 4 bytes are the V3C unit header
         v3c_unit_header v3c_hdr = {};
         parse_v3c_header(v3c_hdr, cbuf, v3c_ptr);
         uint8_t vuh_t = v3c_hdr.vuh_unit_type;
-        std::cout << "-- vuh_unit_type: " << (uint32_t)vuh_t << std::endl;
+        //std::cout << "-- vuh_unit_type: " << (uint32_t)vuh_t << std::endl;
         v3c_unit_info unit = { v3c_hdr, {}};
 
         if (vuh_t == V3C_VPS) {
             // Parameter set contains no NAL units, skip over
-            std::cout << "-- Parameter set V3C unit" << std::endl;
+            //std::cout << "-- Parameter set V3C unit" << std::endl;
             unit.nal_infos.push_back({ ptr, combined_v3c_size });
             mmap.vps_units.push_back(unit);
             ptr += combined_v3c_size;
-            std::cout << std::endl;
+            //std::cout << std::endl;
             continue;
         }
 
@@ -82,12 +82,12 @@ bool mmap_v3c_file(char* cbuf, uint64_t len, v3c_file_map &mmap)
         if (vuh_t == V3C_AD || vuh_t == V3C_CAD) {
             uint8_t v3cu_first_byte = cbuf[v3c_ptr]; // Next up is 1 byte of NAL unit size precision
             nal_size_precision = (v3cu_first_byte >> 5) + 1;
-            std::cout << "  -- Atlas NAL Sample stream, 1 byte for NAL unit size precision: " << (uint32_t)nal_size_precision << std::endl;
+            //std::cout << "  -- Atlas NAL Sample stream, 1 byte for NAL unit size precision: " << (uint32_t)nal_size_precision << std::endl;
             ++v3c_ptr;
         }
         else {
             nal_size_precision = 4;
-            std::cout << "  -- Video NAL Sample stream, using NAL unit size precision of: " << (uint32_t)nal_size_precision << std::endl;
+            //std::cout << "  -- Video NAL Sample stream, using NAL unit size precision of: " << (uint32_t)nal_size_precision << std::endl;
         }
         uint64_t amount_of_nal_units = 0;
         // Now start to parse the NAL sample stream
@@ -114,20 +114,20 @@ bool mmap_v3c_file(char* cbuf, uint64_t len, v3c_file_map &mmap)
             switch (vuh_t) {
             case V3C_AD:
             case V3C_CAD:
-                std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << std::endl;
+                //std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << std::endl;
                 break;
             case V3C_OVD:
             case V3C_GVD:
             case V3C_AVD:
             case V3C_PVD:
                 uint8_t h265_nalu_t = (cbuf[v3c_ptr] & 0b01111110) >> 1;
-                std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << ", HEVC NALU type: " << (uint32_t)h265_nalu_t << std::endl;
+                //std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << ", HEVC NALU type: " << (uint32_t)h265_nalu_t << std::endl;
             }
             unit.nal_infos.push_back({ v3c_ptr, combined_nal_size });
             v3c_ptr += combined_nal_size;
 
         }
-        std::cout << "  -- Amount of NAL units in v3c unit: " << amount_of_nal_units << std::endl;
+        //std::cout << "  -- Amount of NAL units in v3c unit: " << amount_of_nal_units << std::endl;
             
         switch (vuh_t) {
             case V3C_AD:
@@ -149,7 +149,7 @@ bool mmap_v3c_file(char* cbuf, uint64_t len, v3c_file_map &mmap)
                 mmap.pvd_units.push_back(unit);
                 break;
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
         ptr += combined_v3c_size;
     }
     std::cout << "File parsed" << std::endl;
@@ -170,7 +170,7 @@ void parse_v3c_header(v3c_unit_header &hdr, char* buf, uint64_t ptr)
 
         // 3 last bits from first byte and 1 first bit from second byte
         vuh_v3c_parameter_set_id = ((buf[ptr] & 0b111) << 1) | ((buf[ptr + 1] & 0b10000000) >> 7);
-        std::cout << "-- vuh_v3c_parameter_set_id: " << (uint32_t)vuh_v3c_parameter_set_id << std::endl;
+        //std::cout << "-- vuh_v3c_parameter_set_id: " << (uint32_t)vuh_v3c_parameter_set_id << std::endl;
     }
     if (vuh_unit_type == V3C_AVD || vuh_unit_type == V3C_GVD ||
         vuh_unit_type == V3C_OVD || vuh_unit_type == V3C_AD ||
@@ -178,7 +178,7 @@ void parse_v3c_header(v3c_unit_header &hdr, char* buf, uint64_t ptr)
 
         // 6 middle bits from the second byte
         vuh_atlas_id = ((buf[ptr + 1] & 0b01111110) >> 1);
-        std::cout << "-- vuh_atlas_id: " << (uint32_t)vuh_atlas_id << std::endl;
+        //std::cout << "-- vuh_atlas_id: " << (uint32_t)vuh_atlas_id << std::endl;
     }
 
     switch (hdr.vuh_unit_type) {
@@ -203,10 +203,10 @@ void parse_v3c_header(v3c_unit_header &hdr, char* buf, uint64_t ptr)
         hdr.gvd.vuh_atlas_id = vuh_atlas_id;
         // last bit of second byte and 3 first bytes of third byte
         hdr.gvd.vuh_map_index = ((buf[ptr + 1] & 0b1) << 3) | ((buf[ptr + 2] & 0b11100000) >> 5);
-        std::cout << "-- vuh_map_index: " << (uint32_t)hdr.gvd.vuh_map_index << std::endl;
+        //std::cout << "-- vuh_map_index: " << (uint32_t)hdr.gvd.vuh_map_index << std::endl;
         // fourth bit of third byte
         hdr.gvd.vuh_auxiliary_video_flag = (buf[ptr + 2] & 0b00010000) >> 4;
-        std::cout << "-- vuh_auxiliary_video_flag: " << (uint32_t)hdr.gvd.vuh_auxiliary_video_flag << std::endl;
+        //std::cout << "-- vuh_auxiliary_video_flag: " << (uint32_t)hdr.gvd.vuh_auxiliary_video_flag << std::endl;
         break;
 
     case V3C_AVD:
@@ -215,16 +215,16 @@ void parse_v3c_header(v3c_unit_header &hdr, char* buf, uint64_t ptr)
         hdr.avd.vuh_atlas_id = vuh_atlas_id;
         // last bit of second byte and 6 first bytes of third byte
         hdr.avd.vuh_attribute_index = ((buf[ptr + 1] & 0b1) << 6) | ((buf[ptr + 2] & 0b11111100) >> 2);
-        std::cout << "-- vuh_attribute_index: " << (uint32_t)hdr.avd.vuh_attribute_index << std::endl;
+        //std::cout << "-- vuh_attribute_index: " << (uint32_t)hdr.avd.vuh_attribute_index << std::endl;
         // 2 last bits of third byte and 3 first b�ts of fourth byte
         hdr.avd.vuh_attribute_partition_index = (buf[ptr + 2] & 0b11) | ((buf[ptr + 3] & 0b11100000) >> 5);
-        std::cout << "-- vuh_attribute_partition_index: " << (uint32_t)hdr.avd.vuh_attribute_index << std::endl;
+        //std::cout << "-- vuh_attribute_partition_index: " << (uint32_t)hdr.avd.vuh_attribute_index << std::endl;
         // fourth byte: 4 bits
         hdr.avd.vuh_map_index = (buf[ptr + 3] & 0b00011110) >> 1;
-        std::cout << "-- vuh_map_index: " << (uint32_t)hdr.avd.vuh_map_index << std::endl;
+        //std::cout << "-- vuh_map_index: " << (uint32_t)hdr.avd.vuh_map_index << std::endl;
         // last bit of fourth byte
         hdr.avd.vuh_auxiliary_video_flag = (buf[ptr + 3] & 0b1);
-        std::cout << "-- vuh_auxiliary_video_flag: " << (uint32_t)hdr.avd.vuh_auxiliary_video_flag << std::endl;
+        //std::cout << "-- vuh_auxiliary_video_flag: " << (uint32_t)hdr.avd.vuh_auxiliary_video_flag << std::endl;
         break;
 
     case V3C_PVD:

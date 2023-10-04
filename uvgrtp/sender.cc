@@ -55,7 +55,7 @@ int main(int argc, char **argv)
         uvgrtp::context ctx;
         uvgrtp::session* sess = ctx.create_session(remote_address, local_address);
         std::atomic<uint64_t> bytes_sent;
-        v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, 0, false);
+        v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, RCE_PACE_FRAGMENT_SENDING, false);
         sender_func(streams.ad, (char*)mem, mmap.ad_units, RTP_NO_FLAGS, V3C_AD, bytes_sent, fps, result_file);
     }
     else {
@@ -152,6 +152,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vect
     std::atomic<uint64_t> &net_bytes_sent, int fps, const std::string result_file)
 {
     stream->configure_ctx(RCC_FPS_NUMERATOR, fps);
+    stream->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
 
     size_t bytes_sent = 0;
     uint64_t current_frame = 0;
