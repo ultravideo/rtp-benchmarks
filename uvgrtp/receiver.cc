@@ -1,5 +1,5 @@
 #include "uvgrtp_util.hh"
-
+#include "v3c_util.hh"
 #include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
@@ -28,7 +28,7 @@ std::string result_filename = "";
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame);
 
 void receiver_thread(int thread_num, int nthreads, std::string local_address, int local_port,
-    std::string remote_address, int remote_port, bool vvc, bool srtp);
+    std::string remote_address, int remote_port, bool vvc, bool srtp, bool atlas);
 
 int main(int argc, char** argv)
 {
@@ -46,6 +46,7 @@ int main(int argc, char** argv)
 
     int nthreads               = atoi(argv[6]);
     bool vvc_enabled  = get_vvc_state(argv[7]);
+    bool atlas_enabled  = get_atlas_state(argv[7]);
     bool srtp_enabled = get_srtp_state(argv[8]);
 
     std::cout << "Starting uvgRTP receiver tests. " << local_address << ":" << local_port 
@@ -54,27 +55,31 @@ int main(int argc, char** argv)
     thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
 
     std::vector<std::thread*> threads = {};
-
-    for (int i = 0; i < nthreads; ++i) {
-        threads.push_back(new std::thread(receiver_thread, i, nthreads, local_address, local_port,
-            remote_address, remote_port, vvc_enabled, srtp_enabled));
+    if(atlas_enabled) {
+        receiver_thread(0, 1, local_address, local_port, remote_address, remote_port, vvc_enabled, srtp_enabled, atlas_enabled);
     }
-
-    // wait all the thread executions to end and delete them
-    for (int i = 0; i < nthreads; ++i) {
-        if (threads[i]->joinable())
-        {
-            threads[i]->join();
+    else {
+        for (int i = 0; i < nthreads; ++i) {
+            threads.push_back(new std::thread(receiver_thread, i, nthreads, local_address, local_port,
+                remote_address, remote_port, vvc_enabled, srtp_enabled, atlas_enabled));
         }
-        delete threads[i];
-        threads[i] = nullptr;
-    }
 
+        // wait all the thread executions to end and delete them
+        for (int i = 0; i < nthreads; ++i) {
+            if (threads[i]->joinable())
+            {
+                threads[i]->join();
+            }
+            delete threads[i];
+            threads[i] = nullptr;
+        }
+
+    }
     return EXIT_SUCCESS;
 }
 
 void receiver_thread(int thread_num, int nthreads, std::string local_address, int local_port,
-    std::string remote_address, int remote_port, bool vvc, bool srtp)
+    std::string remote_address, int remote_port, bool vvc, bool srtp, bool atlas)
 {
     uvgrtp::context rtp_ctx;
     uvgrtp::session* session = nullptr;
@@ -83,7 +88,7 @@ void receiver_thread(int thread_num, int nthreads, std::string local_address, in
     uint16_t thread_remote_port = remote_port + thread_num * 2;
 
     intialize_uvgrtp(rtp_ctx, &session, &receive, remote_address, local_address,
-        thread_local_port, thread_remote_port, srtp, vvc, false);
+        thread_local_port, thread_remote_port, srtp, vvc, false, atlas);
 
     int tid = thread_num / 2;
     int previous_packets = 0;

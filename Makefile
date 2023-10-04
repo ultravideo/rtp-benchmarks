@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 CXX = g++
-CXXFLAGS = -Wall -Wextra -O2 -std=c++11 -g
+CXXFLAGS = -Wall -Wextra -O2 -std=c++17 -g
 
 test_file_creation: util/test_file_creation.cc util/util.cc
 	$(CXX) $(CXXFLAGS) -o test_file_creation util/test_file_creation.cc util/util.cc -lkvazaar -lpthread 

@@ -326,22 +326,22 @@ v3c_file_map init_mmap()
 {
     v3c_file_map mmap = {};
 
-    v3c_unit_header hdr = { V3C_AD };
+    v3c_unit_header hdr = { V3C_AD, {} };
     hdr.ad = { 0, 0 };
     v3c_unit_info unit = { hdr, {}, 0, false };
     mmap.ad_units.push_back(unit);
 
-    hdr = { V3C_OVD };
+    hdr = { V3C_OVD, {} };
     hdr.ovd = { 0, 0 };
     unit = { hdr, {}, 0, false };
     mmap.ovd_units.push_back(unit);
 
-    hdr = { V3C_GVD };
+    hdr = { V3C_GVD, {} };
     hdr.gvd = { 0, 0, 0, false};
     unit = { hdr, {}, 0, false };
     mmap.gvd_units.push_back(unit);
 
-    hdr = { V3C_AVD };
+    hdr = { V3C_AVD, {} };
     hdr.avd = { 0, 0, 0, 0, 0, false};
     unit = { hdr, {}, 0, false };
     mmap.avd_units.push_back(unit);
@@ -533,7 +533,7 @@ bool is_gop_ready(uint64_t index, v3c_file_map& mmap)
 
 void copy_rtp_payload(std::vector<v3c_unit_info>* units, uint64_t max_size, uvgrtp::frame::rtp_frame* frame)
 {
-    uint32_t seq = frame->header.seq;
+    //uint32_t seq = frame->header.seq;
     if (units->back().nal_infos.size() == max_size) {
         v3c_unit_header hdr = { units->back().header.vuh_unit_type};
         v3c_unit_info info = { hdr, {}, 0, false };

@@ -17,7 +17,7 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
     const std::string result_file, std::vector<uint64_t> chunk_sizes);
 
 void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, rtp_flags_t flags, int fmt,
-    std::atomic<uint64_t> &bytes_sent, int fps);
+    std::atomic<uint64_t> &net_bytes_sent, int fps, const std::string result_file);
 
 int main(int argc, char **argv)
 {
@@ -55,10 +55,20 @@ int main(int argc, char **argv)
         uvgrtp::context ctx;
         uvgrtp::session* sess = ctx.create_session(remote_address, local_address);
         std::atomic<uint64_t> bytes_sent;
-        v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, flags, false);
-        sender_func(streams.ad, (char*)mem, mmap.ad_units, RTP_NO_FLAGS, V3C_AD, bytes_sent, fps);
+        v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, 0, false);
+        sender_func(streams.ad, (char*)mem, mmap.ad_units, RTP_NO_FLAGS, V3C_AD, bytes_sent, fps, result_file);
     }
     else {
+        std::vector<uint64_t> chunk_sizes;
+        get_chunk_sizes(get_chunk_filename(input_file), chunk_sizes);
+
+        if (mem == nullptr || chunk_sizes.empty())
+        {
+            std::cerr << "Failed to get file: " << input_file << std::endl;
+            std::cerr << "or chunk location file: " << get_chunk_filename(input_file) << std::endl;
+            return EXIT_FAILURE;
+        }
+
         std::vector<std::thread*> threads;
 
         for (int i = 0; i < nthreads; ++i) {
@@ -91,7 +101,7 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
     uint16_t thread_remote_port = remote_port + thread_num * 2;
 
     intialize_uvgrtp(rtp_ctx, &session, &send, remote_address, local_address,
-        thread_local_port, thread_remote_port, srtp, vvc, false);
+        thread_local_port, thread_remote_port, srtp, vvc, false, false);
 
     send->configure_ctx(RCC_FPS_NUMERATOR, fps);
 
@@ -139,7 +149,7 @@ void sender_thread(void* mem, std::string local_address, uint16_t local_port,
 }
 
 void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, rtp_flags_t flags, int fmt,
-    std::atomic<uint64_t> &bytes_sent, int fps)
+    std::atomic<uint64_t> &net_bytes_sent, int fps, const std::string result_file)
 {
     stream->configure_ctx(RCC_FPS_NUMERATOR, fps);
 

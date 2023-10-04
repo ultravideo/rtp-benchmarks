@@ -317,7 +317,7 @@ die "Please specify role with --role" if !$role;
 
 
 die "library not supported\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
-die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266"));
+die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266", "atlas"));
 
 $fps = 30.0 if $lat and !$fps;
 
