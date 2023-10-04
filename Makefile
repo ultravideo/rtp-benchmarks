@@ -7,16 +7,16 @@ test_file_creation: util/test_file_creation.cc util/util.cc
 	$(CXX) $(CXXFLAGS) -o test_file_creation util/test_file_creation.cc util/util.cc -lkvazaar -lpthread 
 
 uvgrtp_sender: uvgrtp/sender.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
+	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
 
 uvgrtp_receiver: uvgrtp/receiver.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lpthread -lcryptopp
+	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp
 
 uvgrtp_latency_sender: uvgrtp/latency_sender.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
+	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
 
 uvgrtp_latency_receiver: uvgrtp/latency_receiver.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
+	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
 
 # ffmpeg_sender:
 # 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \

@@ -20,3 +20,5 @@ void write_receive_results_to_file(const std::string& filename,
 bool get_srtp_state(std::string srtp);
 
 bool get_vvc_state(std::string format);
+
+bool get_atlas_state(std::string format);
