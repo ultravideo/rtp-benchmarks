@@ -55,8 +55,10 @@ int main(int argc, char **argv)
         uvgrtp::context ctx;
         uvgrtp::session* sess = ctx.create_session(remote_address, local_address);
         std::atomic<uint64_t> bytes_sent;
-        v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, RCE_PACE_FRAGMENT_SENDING, false);
-        sender_func(streams.ad, (char*)mem, mmap.ad_units, RTP_NO_FLAGS, V3C_AD, bytes_sent, fps, result_file);
+        int rce_flags = RCE_PACE_FRAGMENT_SENDING;
+        rtp_flags_t rtp_flags = RTP_NO_H26X_SCL;
+        v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, rce_flags, false);
+        sender_func(streams.ad, (char*)mem, mmap.ad_units, rtp_flags, V3C_AD, bytes_sent, fps, result_file);
     }
     else {
         std::vector<uint64_t> chunk_sizes;
