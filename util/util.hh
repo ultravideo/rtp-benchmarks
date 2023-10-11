@@ -17,6 +17,9 @@ void write_send_results_to_file(const std::string& filename,
 void write_receive_results_to_file(const std::string& filename,
     const size_t bytes, const size_t packets, const uint64_t diff_ms);
 
+void write_latency_results_to_file(const std::string& filename,
+    const size_t frames, const float intra, const float inter, const float avg);
+
 bool get_srtp_state(std::string srtp);
 
 bool get_vvc_state(std::string format);

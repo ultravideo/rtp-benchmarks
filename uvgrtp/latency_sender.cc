@@ -57,7 +57,7 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                     break;
             }
         }
-        else if (atlas_enabled) {
+        else if (atlas_enabled) { // Note that this ignores any parameter set NAL units
             uint8_t nalu_t = (frame->payload[0] >> 1) & 0x3f;
             if (nalu_t >= 16 && nalu_t <= 29) { // intra frame
                 diff = get_diff();
@@ -196,6 +196,8 @@ static int sender(std::string input_file, std::string local_address, int local_p
         total_inter / (float)ninters,
         total / (float)frames
     );
+    write_latency_results_to_file("latency_results", frames, total_intra / (float)nintras, total_inter / (float)ninters,
+        total / (float)frames);
 
     std::cout << "Ending latency send test with " << total_frames_received << " frames received" << std::endl;
 
