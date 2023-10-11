@@ -15,10 +15,12 @@ std::chrono::high_resolution_clock::time_point frame_send_time;
 size_t frames   = 0;
 size_t ninters  = 0;
 size_t nintras  = 0;
+size_t n_noncl  = 0;
 
 size_t total       = 0;
 size_t total_intra = 0;
 size_t total_inter = 0;
+size_t total_noncl = 0; // non-ACL or non-VCL unit (not video coding layer)
 
 bool vvc_headers = false;
 int total_frames_received = 0;
@@ -59,19 +61,26 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
         }
         else if (atlas_enabled) { // Note that this ignores any parameter set NAL units
             uint8_t nalu_t = (frame->payload[0] >> 1) & 0x3f;
-            if (nalu_t >= 16 && nalu_t <= 29) { // intra frame
+            if (nalu_t <= 15) { // inter frame
+                diff = get_diff();
+                total += (diff / 1000);
+                total_inter += (diff / 1000);
+                ninters++;
+                frames++;
+            }
+            else if (nalu_t >= 16 && nalu_t <= 29) { // intra frame
                 diff = get_diff();
                 total += (diff / 1000);
                 total_intra += (diff / 1000);
                 nintras++;
                 frames++;
             }
-            else if (nalu_t <= 15) { // inter frame
+            else { // non-ACL frame
                 diff = get_diff();
                 total += (diff / 1000);
-                total_inter += (diff / 1000);
-                ninters++;
-                frames++;
+                total_noncl += (diff / 1000);
+                n_noncl++;
+                //frames++; ignore non-ACL and non-VCL frames in tests
             }
         }
         else
