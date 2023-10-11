@@ -1,4 +1,5 @@
 #include "uvgrtp_util.hh"
+#include "v3c_util.hh"
 #include "../util/util.hh"
 
 #include <uvgrtp/lib.hh>
@@ -21,6 +22,7 @@ size_t total_inter = 0;
 
 bool vvc_headers = false;
 int total_frames_received = 0;
+bool atlas_enabled = false;
 
 uint64_t get_diff()
 {
@@ -55,6 +57,23 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                     break;
             }
         }
+        else if (atlas_enabled) {
+            uint8_t nalu_t = (frame->payload[0] >> 1) & 0x3f;
+            if (nalu_t >= 16 && nalu_t <= 29) { // intra frame
+                diff = get_diff();
+                total += (diff / 1000);
+                total_intra += (diff / 1000);
+                nintras++;
+                frames++;
+            }
+            else if (nalu_t <= 15) { // inter frame
+                diff = get_diff();
+                total += (diff / 1000);
+                total_inter += (diff / 1000);
+                ninters++;
+                frames++;
+            }
+        }
         else
         {
             switch ((frame->payload[4] >> 1) & 0x3f) {
@@ -80,7 +99,7 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
 }
 
 static int sender(std::string input_file, std::string local_address, int local_port, 
-    std::string remote_address, int remote_port, float fps, bool vvc_enabled, bool srtp_enabled)
+    std::string remote_address, int remote_port, float fps, bool vvc_enabled, bool srtp_enabled, bool atlas)
 {
     vvc_headers = vvc_enabled;
 
@@ -89,22 +108,31 @@ static int sender(std::string input_file, std::string local_address, int local_p
     uvgrtp::media_stream* send = nullptr;
 
     intialize_uvgrtp(rtp_ctx, &session, &send, remote_address, local_address,
-        local_port, remote_port, srtp_enabled, vvc_enabled, true);
+        local_port, remote_port, srtp_enabled, vvc_enabled, true, atlas);
 
     send->install_receive_hook(nullptr, hook_sender);
 
     size_t len = 0;
     void* mem = get_mem(input_file, len);
+    std::vector<uint64_t> chunk_sizes; // For HEVC/VVC
+    v3c_file_map mmap; // For Atlas
 
-    std::vector<uint64_t> chunk_sizes;
-    get_chunk_sizes(get_chunk_filename(input_file), chunk_sizes);
-
-    if (mem == nullptr || chunk_sizes.empty())
+    if(atlas_enabled) {
+        mmap_v3c_file((char*)mem, len, mmap);
+        std::cout << "Starting latency send test with Atlas data" << std::endl;
+    }
+    else {
+        get_chunk_sizes(get_chunk_filename(input_file), chunk_sizes);  
+        if(chunk_sizes.empty()) {
+            return EXIT_FAILURE;
+        }
+        std::cout << "Starting latency send test with " << chunk_sizes.size() << " chunks" << std::endl;
+    }
+    if (mem == nullptr)
     {
         return EXIT_FAILURE;
     }
 
-    std::cout << "Starting latency send test with " << chunk_sizes.size() << " chunks" << std::endl;
 
     uint64_t current_frame = 0;
     uint64_t period = (uint64_t)((1000 * 1000 / fps) );
@@ -112,27 +140,50 @@ static int sender(std::string input_file, std::string local_address, int local_p
     rtp_error_t ret = RTP_OK;
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    if(atlas_enabled) {
+        for (auto& p : mmap.ad_units) {
+            for (auto i : p.nal_infos) {
+                // record send time
+                frame_send_time = std::chrono::high_resolution_clock::now();
+                if ((ret = send->push_frame((uint8_t*)mem + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
+                    fprintf(stderr, "push_frame() failed!\n");
+                    cleanup_uvgrtp(rtp_ctx, session, send);
+                    return EXIT_FAILURE;
+                }
+                current_frame += 1;
 
-    for (auto& chunk_size : chunk_sizes)
-    {
-        // record send time
-        frame_send_time = std::chrono::high_resolution_clock::now();
-        if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
-            fprintf(stderr, "push_frame() failed!\n");
-            cleanup_uvgrtp(rtp_ctx, session, send);
-            return EXIT_FAILURE;
+                // wait until is the time to send next latency test frame
+                auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now() - start).count();
+
+                if (runtime < current_frame * period)
+                    std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
+            }   
         }
-
-        current_frame += 1;
-        offset += chunk_size;
-
-        // wait until is the time to send next latency test frame
-        auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now() - start).count();
-
-        if (runtime < current_frame * period)
-            std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
     }
+    else {
+        for (auto& chunk_size : chunk_sizes)
+        {
+            // record send time
+            frame_send_time = std::chrono::high_resolution_clock::now();
+            if ((ret = send->push_frame((uint8_t*)mem + offset, chunk_size, 0)) != RTP_OK) {
+                fprintf(stderr, "push_frame() failed!\n");
+                cleanup_uvgrtp(rtp_ctx, session, send);
+                return EXIT_FAILURE;
+            }
+
+            current_frame += 1;
+            offset += chunk_size;
+
+            // wait until is the time to send next latency test frame
+            auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::high_resolution_clock::now() - start).count();
+
+            if (runtime < current_frame * period)
+                std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
+        }
+    }
+    
 
     // just so we don't exit before last frame has arrived. Does not affect results
     std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
@@ -167,7 +218,8 @@ int main(int argc, char **argv)
 
     float fps                  = atof(argv[6]);
     bool vvc_enabled           = get_vvc_state(argv[7]);
+    atlas_enabled              = get_atlas_state(argv[7]);
     bool srtp_enabled          = get_srtp_state(argv[8]);
 
-    return sender(input_file, local_address, local_port, remote_address, remote_port, fps, vvc_enabled, srtp_enabled);
+    return sender(input_file, local_address, local_port, remote_address, remote_port, fps, vvc_enabled, srtp_enabled, atlas_enabled);
 }
