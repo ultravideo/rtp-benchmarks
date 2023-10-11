@@ -380,7 +380,7 @@ sub parse {
 }
 
 sub parse_latency {
-    my ($lib, $path, $unit) = @_;
+    my ($lib, $path, $nframes, $unit) = @_;
     my ($frames, $avg, $intra, $inter, $cnt) = (0) x 5;
     my $frame_avg = 0;
 
@@ -391,7 +391,7 @@ sub parse_latency {
     while (my $line = <$fh>) {
         my @nums = ($line =~ m/(\d+).*intra\s(\d+\.\d+).*inter\s(\d+\.\d+).*avg\s(\d+\.\d+)/);
 
-        if ($nums[0] == 598) {
+        if ($nums[0] == $nframes) {
             $frame_avg++;
         }
 
@@ -406,7 +406,7 @@ sub parse_latency {
     $intra  /= $cnt;
     $inter  /= $cnt;
     $avg    /= $frame_avg;
-    $frames = 100*$frames/(598*$rounds);
+    $frames = 100*$frames/($nframes*$rounds);
 
     print "Completed: $frames%, intra $intra ms, inter $inter ms, avg $avg ms\n";
 }
@@ -440,6 +440,7 @@ sub print_help {
 GetOptions(
     "library|lib|l=s"              => \(my $lib = ""),
     "role|r=s"                     => \(my $role = ""),
+    "nframes"                      => \(my $nframes = 0),
     "path|dir|directory|p=s"       => \(my $path = ""),
     "threadst|threads|=i"          => \(my $threads = 0),
     "iter|iterations|rounds|i=i"   => \(my $iter = 0),
@@ -470,7 +471,7 @@ if ($parse eq "best" or $parse eq "all") {
 } elsif ($parse eq "csv") {
     parse_csv($lib, $iter, $path, $unit, $filesize);
 } elsif ($parse eq "latency") {
-    parse_latency($lib, $path, $unit);
+    parse_latency($lib, $path, $nframes, $unit);
 } elsif ($role eq "send") {
     print_send($lib, $iter, $threads, $path, $unit, $filesize);
 } elsif ($role eq "recv") {
