@@ -155,7 +155,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vect
 {
     stream->configure_ctx(RCC_FPS_NUMERATOR, fps);
     stream->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Wait a moment to make sure that the receiver is ready
     size_t bytes_sent = 0;
     uint64_t current_frame = 0;
     uint64_t period = (uint64_t)((1000 / (double)fps) * 1000);
@@ -166,7 +166,10 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vect
 
     for (auto& p : units) {
         for (auto i : p.nal_infos) {
-
+            uint8_t nalu_t = (cbuf[i.location] >> 1) & 0x3f;
+            if (nalu_t >= 30) { // skip non-ACL Atlas NAL units
+                    continue;
+            }
             //std::cout << "Sending NAL unit in location " << i.location << " with size " << i.size << std::endl;
             if((ret = stream->push_frame((uint8_t*)cbuf + i.location, i.size, flags)) != RTP_OK) {
                 fprintf(stderr, "push_frame() failed!\n");
