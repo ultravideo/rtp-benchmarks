@@ -15,12 +15,10 @@ std::chrono::high_resolution_clock::time_point frame_send_time;
 size_t frames   = 0;
 size_t ninters  = 0;
 size_t nintras  = 0;
-size_t n_noncl  = 0;
 
 size_t total       = 0;
 size_t total_intra = 0;
 size_t total_inter = 0;
-size_t total_noncl = 0; // non-ACL or non-VCL unit (not video coding layer)
 
 bool vvc_headers = false;
 int total_frames_received = 0;
@@ -76,11 +74,7 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                 frames++;
             }
             else { // non-ACL frame
-                diff = get_diff();
-                total += (diff / 1000);
-                total_noncl += (diff / 1000);
-                n_noncl++;
-                //frames++; ignore non-ACL and non-VCL frames in tests
+                std::cout << "Unknown NAL unit received" << std::endl;
             }
         }
         else
@@ -147,11 +141,16 @@ static int sender(std::string input_file, std::string local_address, int local_p
     uint64_t period = (uint64_t)((1000 * 1000 / fps) );
     size_t offset = 0;
     rtp_error_t ret = RTP_OK;
+    uint8_t* bytes = (uint8_t*)mem;
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     if(atlas_enabled) {
         for (auto& p : mmap.ad_units) {
             for (auto i : p.nal_infos) {
+                uint8_t nalu_t = (bytes[i.location] >> 1) & 0x3f;
+                if (nalu_t >= 30) { // skip non-ACL Atlas NAL units
+                    continue;
+                }
                 // record send time
                 frame_send_time = std::chrono::high_resolution_clock::now();
                 if ((ret = send->push_frame((uint8_t*)mem + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
