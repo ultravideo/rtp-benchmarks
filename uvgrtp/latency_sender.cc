@@ -197,7 +197,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
 
     cleanup_uvgrtp(rtp_ctx, session, send);
-
+    std::cout << "nintras " << nintras << ", ninters " << ninters << std::endl;
     fprintf(stderr, "%zu: intra %lf, inter %lf, avg %lf\n",
         frames,
         total_intra / (float)nintras,
