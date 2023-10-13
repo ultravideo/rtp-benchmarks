@@ -9,12 +9,16 @@
 #include <algorithm>
 #include <string>
 #include <chrono>
+#include <vector>
 
 std::chrono::high_resolution_clock::time_point frame_send_time;
 
 size_t frames   = 0;
 size_t ninters  = 0;
 size_t nintras  = 0;
+long long send_times[320];
+std::vector<long long> recv_times = {};
+std::vector<uint64_t> diff_times = {};
 
 size_t total       = 0;
 size_t total_intra = 0;
@@ -73,10 +77,15 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                 nintras++;
                 frames++;
             }
+            diff_times.push_back(diff);
+            auto frame_recv_time = std::chrono::high_resolution_clock::now();
+            auto timeSinceEpoch = std::chrono::time_point_cast<std::chrono::milliseconds>(frame_recv_time);
+            auto duration = timeSinceEpoch.time_since_epoch();
+            long long ms = duration.count();
+            recv_times.push_back(ms);
             /*else { // non-ACL frame - remove commenting if needed
                 std::cout << "Non-ACL Atlas NAL unit received" << std::endl;
             }*/
-            std::cout << frame->payload_len << std::endl;
         }
         else
         {
@@ -155,6 +164,11 @@ static int sender(std::string input_file, std::string local_address, int local_p
                 }
                 // record send time
                 frame_send_time = std::chrono::high_resolution_clock::now();
+                auto timeSinceEpoch = std::chrono::time_point_cast<std::chrono::milliseconds>(frame_send_time);
+                auto duration = timeSinceEpoch.time_since_epoch();
+                long long ms = duration.count();
+                send_times[current_frame] = ms;
+
                 if ((ret = send->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
                     fprintf(stderr, "push_frame() failed!\n");
                     cleanup_uvgrtp(rtp_ctx, session, send);
@@ -209,7 +223,23 @@ static int sender(std::string input_file, std::string local_address, int local_p
     );
     write_latency_results_to_file("latency_results", frames, total_intra / (float)nintras, total_inter / (float)ninters,
         total / (float)frames);
-
+    for(int i = 0; i < 320; ++i) {
+        long long diff_from_last = 0;
+        if(i > 0) {
+            diff_from_last = send_times[i] - send_times[i-1];
+        }
+        std::cout << send_times[i] << ", diff from last " << diff_from_last << std::endl;
+    }
+    for(uint64_t i : diff_times) {
+        std::cout << "diff " << i << std::endl;
+    }
+    for(int i = 0; i < 320; ++i) {
+        long long diff_from_last = 0;
+        if(i > 0) {
+            diff_from_last = recv_times.at(i) - recv_times.at(i-1);
+        }
+        std::cout << recv_times.at(i) << ", diff from last " << diff_from_last << std::endl;
+    }
     std::cout << "Ending latency send test with " << total_frames_received << " frames received" << std::endl;
 
     return EXIT_SUCCESS;
