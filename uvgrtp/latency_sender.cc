@@ -16,7 +16,15 @@ std::chrono::high_resolution_clock::time_point frame_send_time;
 size_t frames   = 0;
 size_t ninters  = 0;
 size_t nintras  = 0;
-long long send_times[320];
+std::vector<long long> intra_send = {};
+std::vector<long long> inter_send = {};
+
+std::vector<long long> intra_recv = {};
+std::vector<long long> inter_recv = {};
+
+std::vector<long long> send_times = {};
+std::vector<long long> after_send_times = {};
+
 std::vector<long long> recv_times = {};
 std::vector<uint64_t> diff_times = {};
 
@@ -33,6 +41,13 @@ uint64_t get_diff()
     return std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::high_resolution_clock::now() - frame_send_time
         ).count();
+}
+
+long long get_current_time() {
+    auto time = std::chrono::high_resolution_clock::now();
+    auto since_epoch = std::chrono::time_point_cast<std::chrono::milliseconds>(time);
+    auto duration = since_epoch.time_since_epoch();
+    return duration.count();
 }
 
 static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
@@ -69,6 +84,7 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                 total_inter += (diff / 1000);
                 ninters++;
                 frames++;
+                inter_recv.push_back(get_current_time());
             }
             else if (nalu_t >= 16 && nalu_t <= 29) { // intra frame
                 diff = get_diff();
@@ -76,13 +92,11 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                 total_intra += (diff / 1000);
                 nintras++;
                 frames++;
+                intra_recv.push_back(get_current_time());
             }
             diff_times.push_back(diff);
-            auto frame_recv_time = std::chrono::high_resolution_clock::now();
-            auto timeSinceEpoch = std::chrono::time_point_cast<std::chrono::milliseconds>(frame_recv_time);
-            auto duration = timeSinceEpoch.time_since_epoch();
-            long long ms = duration.count();
-            recv_times.push_back(ms);
+            recv_times.push_back(get_current_time());
+
             /*else { // non-ACL frame - remove commenting if needed
                 std::cout << "Non-ACL Atlas NAL unit received" << std::endl;
             }*/
@@ -162,18 +176,24 @@ static int sender(std::string input_file, std::string local_address, int local_p
                 if (nalu_t >= 30) { // skip non-ACL Atlas NAL units
                     continue;
                 }
+                
                 // record send time
                 frame_send_time = std::chrono::high_resolution_clock::now();
-                auto timeSinceEpoch = std::chrono::time_point_cast<std::chrono::milliseconds>(frame_send_time);
-                auto duration = timeSinceEpoch.time_since_epoch();
-                long long ms = duration.count();
-                send_times[current_frame] = ms;
+                auto ms = get_current_time();
+                send_times.push_back(ms);
+                if (nalu_t <= 15) { // inter frame
+                    inter_send.push_back(ms);
+                }
+                else if (nalu_t >= 16 && nalu_t <= 29) { // intra frame
+                    intra_send.push_back(ms);
+                }
 
                 if ((ret = send->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
                     fprintf(stderr, "push_frame() failed!\n");
                     cleanup_uvgrtp(rtp_ctx, session, send);
                     return EXIT_FAILURE;
                 }
+                after_send_times.push_back(get_current_time());
                 current_frame += 1;
 
                 // wait until is the time to send next latency test frame
@@ -223,23 +243,49 @@ static int sender(std::string input_file, std::string local_address, int local_p
     );
     write_latency_results_to_file("latency_results", frames, total_intra / (float)nintras, total_inter / (float)ninters,
         total / (float)frames);
-    for(int i = 0; i < 320; ++i) {
-        long long diff_from_last = 0;
-        if(i > 0) {
-            diff_from_last = send_times[i] - send_times[i-1];
-        }
+
+    // DEBUG CODE:
+        for(int i = 0; i < send_times.size(); ++i) {
+            long long diff_from_last = 0;
+            if(i > 0) {
+                diff_from_last = send_times.at(i) - send_times.at(i-1);
+            }
         std::cout << send_times[i] << ", diff from last " << diff_from_last << std::endl;
     }
+
+    // after send times
+        for(int i = 0; i < after_send_times.size(); ++i) {
+        long long diff_from_last = 0;
+            if(i > 0) {
+                diff_from_last = after_send_times.at(i) - after_send_times.at(i-1);
+            }
+        std::cout << after_send_times[i] << ", diff from last (after send times) " << diff_from_last << std::endl;
+    }
+
     for(uint64_t i : diff_times) {
         std::cout << "diff " << i << std::endl;
     }
-    for(int i = 0; i < 320; ++i) {
+    for(int i = 0; i < recv_times.size(); ++i) {
         long long diff_from_last = 0;
         if(i > 0) {
             diff_from_last = recv_times.at(i) - recv_times.at(i-1);
         }
         std::cout << recv_times.at(i) << ", diff from last " << diff_from_last << std::endl;
     }
+
+    // calculate latencies
+    if(total_frames_received >= current_frame) {
+        for(int i = 0; i < intra_recv.size(); ++i) {
+            long long diff = intra_recv.at(i) - intra_send.at(i);
+            std::cout << "intra diff " << diff << std::endl;
+        }
+        for(int i = 0; i < inter_recv.size(); ++i) {
+            long long diff = inter_recv.at(i) - inter_send.at(i);
+            std::cout << "inter diff " << diff << std::endl;
+        }
+    }
+    
+
     std::cout << "Ending latency send test with " << total_frames_received << " frames received" << std::endl;
 
     return EXIT_SUCCESS;

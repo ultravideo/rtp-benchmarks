@@ -60,7 +60,7 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
         std::cout << "Received " << total_frames_received << " frames. No more frames received for "
             << timout << " ms." << std::endl;
     }
-    for(int i = 0; i < 320; ++i) {
+    for(int i = 0; i < send_times.size(); ++i) {
         long long diff_from_last = 0;
         if(i > 0) {
             diff_from_last = send_times.at(i) - send_times.at(i-1);

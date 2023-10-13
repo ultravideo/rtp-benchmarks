@@ -64,7 +64,8 @@ void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrt
     (*mStream)->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
     (*mStream)->configure_ctx(RCC_RING_BUFFER_SIZE, 40 * 1000 * 1000);
     (*mStream)->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
-    (*mStream)->configure_ctx(RCC_PKT_MAX_DELAY, 100);
+    (*mStream)->configure_ctx(RCC_PKT_MAX_DELAY, 1000);
+    (*mStream)->configure_ctx(RCC_POLL_TIMEOUT, 1000);
 }
 
 void cleanup_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session* session, uvgrtp::media_stream* mStream)
