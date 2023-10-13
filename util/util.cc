@@ -149,7 +149,7 @@ void write_latency_results_to_file(const std::string& filename,
     std::cout << "Writing latency results into file: " << filename << std::endl;
     std::ofstream result_file;
     result_file.open(filename, std::ios::out | std::ios::app | std::ios::ate);
-    result_file << frames << ": intra " << intra << ", inter " << inter << ", avg " << avg << std::endl;
+    result_file << frames << ";" << intra << ";" << inter << ";" << avg << std::endl;
     result_file.close();
 }
 

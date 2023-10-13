@@ -73,32 +73,34 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                 nintras++;
                 frames++;
             }
-            else { // non-ACL frame
-                std::cout << "Unknown NAL unit received" << std::endl;
-            }
+            /*else { // non-ACL frame - remove commenting if needed
+                std::cout << "Non-ACL Atlas NAL unit received" << std::endl;
+            }*/
+            std::cout << frame->payload_len << std::endl;
         }
         else
         {
-            switch ((frame->payload[4] >> 1) & 0x3f) {
-                case 19: // intra frame
-                    diff = get_diff();
-                    total += (diff / 1000);
-                    total_intra += (diff / 1000);
-                    nintras++;
-                    frames++;
-                    break;
-                case 1: // inter frame
-                    diff = get_diff();
-                    total += (diff / 1000);
-                    total_inter += (diff / 1000);
-                    ninters++;
-                    frames++;
-                    break;
+            uint8_t nalu_t = (frame->payload[4] >> 1) & 0x3f;
+            if (nalu_t <= 15) { // inter frame
+                diff = get_diff();
+                total += (diff / 1000);
+                total_inter += (diff / 1000);
+                ninters++;
+                frames++;
             }
+            else if (nalu_t >= 16 && nalu_t <= 23) { // intra frame
+                diff = get_diff();
+                total += (diff / 1000);
+                total_intra += (diff / 1000);
+                nintras++;
+                frames++;
+            }
+            /*else { // non-VCL frame - remove commenting if needed
+                std::cout << "Non-VCL HEVC NAL unit received" << std::endl;
+            }*/
         }
         ++total_frames_received;
     }
-
 }
 
 static int sender(std::string input_file, std::string local_address, int local_port, 
@@ -153,7 +155,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
                 }
                 // record send time
                 frame_send_time = std::chrono::high_resolution_clock::now();
-                if ((ret = send->push_frame((uint8_t*)mem + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
+                if ((ret = send->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
                     fprintf(stderr, "push_frame() failed!\n");
                     cleanup_uvgrtp(rtp_ctx, session, send);
                     return EXIT_FAILURE;
@@ -197,6 +199,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
 
     cleanup_uvgrtp(rtp_ctx, session, send);
+    std::cout << "total intra " << total_intra << ", total_inter " << total_inter << std::endl;
     std::cout << "nintras " << nintras << ", ninters " << ninters << std::endl;
     fprintf(stderr, "%zu: intra %lf, inter %lf, avg %lf\n",
         frames,
