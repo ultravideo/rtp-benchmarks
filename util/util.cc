@@ -169,7 +169,7 @@ bool get_vvc_state(std::string format)
     {
         return true;
     }
-    else if (format != "hevc" && format != "h265" && format != "atlas")    {
+    else if (format != "hevc" && format != "h265" && format != "atlas" && format != "vpcc")    {
         std::cerr << "Unsupported sender format: " << format << std::endl;
     }
     return false;

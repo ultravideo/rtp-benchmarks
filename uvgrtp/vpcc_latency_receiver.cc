@@ -10,64 +10,44 @@
 #include <chrono>
 
 bool frame_received = true;
-int total_frames_received = 0;
-bool atlas_enabled = false;
-std::vector<long long> send_times = {};
-
 
 void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
     // send the frame immediately back
     uvgrtp::media_stream* receive = (uvgrtp::media_stream*)arg;
-    int flags = 0;
-    if(atlas_enabled) {
-        flags = RTP_NO_H26X_SCL;
-    }
-    auto frame_send_time = std::chrono::high_resolution_clock::now();
-    auto timeSinceEpoch = std::chrono::time_point_cast<std::chrono::milliseconds>(frame_send_time);
-    auto duration = timeSinceEpoch.time_since_epoch();
-    long long ms = duration.count();
-    send_times.push_back(ms);
-    if((receive->push_frame(frame->payload, frame->payload_len, flags)) != RTP_OK) {
+
+    if((receive->push_frame(frame->payload, frame->payload_len, RTP_NO_H26X_SCL)) != RTP_OK) {
         std::cout << "Error sending frame" << std::endl;
     }
     frame_received = true;
-    ++total_frames_received;
 }
 
-int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port,
-    bool vvc_enabled, bool srtp_enabled, bool atlas)
+int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port)
 {
     int timout = 250;
     uvgrtp::context rtp_ctx;
-    uvgrtp::session* session = nullptr;
-    uvgrtp::media_stream* receive = nullptr;
+    uvgrtp::session* sess = rtp_ctx.create_session(remote_address, local_address);
 
-    intialize_uvgrtp(rtp_ctx, &session, &receive, remote_address, local_address,
-        local_port, remote_port, srtp_enabled, vvc_enabled, true, atlas);
+    int flags = 0;
+    v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, flags, true);
 
-    // the receiving end is not measured in latency tests
-    receive->install_receive_hook(receive, hook_receiver);
+    streams.ad->install_receive_hook(streams.ad, hook_receiver);
+    streams.ovd->install_receive_hook(streams.ovd, hook_receiver);
+    streams.gvd->install_receive_hook(streams.gvd, hook_receiver);
+    streams.avd->install_receive_hook(streams.avd, hook_receiver);
     
-    while (frame_received && total_frames_received < EXPECTED_FRAMES)
+    while (frame_received)
     {
         frame_received = false;
         std::this_thread::sleep_for(std::chrono::milliseconds(timout));
     }
-
-    if (total_frames_received < EXPECTED_FRAMES)
-    {
-        std::cout << "Received " << total_frames_received << " frames. No more frames received for "
-            << timout << " ms." << std::endl;
-    }
-    for(int i = 0; i < send_times.size(); ++i) {
-        long long diff_from_last = 0;
-        if(i > 0) {
-            diff_from_last = send_times.at(i) - send_times.at(i-1);
-        }
-        std::cout << send_times.at(i) << ", diff from last " << diff_from_last << std::endl;
-    }
-    cleanup_uvgrtp(rtp_ctx, session, receive);
+    std::cout << "No more frames received for " << timout << " ms, end benchmark" << std::endl;
+    
+    sess->destroy_stream(streams.ad);
+    sess->destroy_stream(streams.ovd);
+    sess->destroy_stream(streams.gvd);
+    sess->destroy_stream(streams.avd);
+    rtp_ctx.destroy_session(sess);
 
     return EXIT_SUCCESS;
 }
@@ -85,8 +65,12 @@ int main(int argc, char **argv)
     std::string remote_address = argv[3];
     int remote_port = atoi(argv[4]);
     bool vvc_enabled = get_vvc_state(argv[5]);
-    atlas_enabled = get_atlas_state(argv[5]);
+    bool atlas_enabled = get_atlas_state(argv[5]);
     bool srtp_enabled = get_srtp_state(argv[6]);
 
-    return receiver(local_address, local_port, remote_address, remote_port, vvc_enabled, srtp_enabled, atlas_enabled);
+    (void*)vvc_enabled;
+    (void*)atlas_enabled;
+    (void*)srtp_enabled;
+
+    return receiver(local_address, local_port, remote_address, remote_port);
 }
