@@ -196,6 +196,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     int full_frames = ad_send.size();
     float total_time = 0;
     for (auto i = 0; i < full_frames; ++i) {
+        // printti tässä, aina tyssää  75 kohdalla. 75*4 on mitä? 300. siitä johtunee
         // Find the time when a full frame was sent. For GVD and AVD its every fourth NAL unit
         auto full_frame_send_time = find_earliest_time_point(ad_send.at(i),
         ovd_send.at(i),
@@ -206,12 +207,12 @@ static int sender(std::string input_file, std::string local_address, int local_p
         auto full_frame_recv_time = find_latest_time_point(ad_recv.at(i),
         ovd_recv.at(i),
         gvd_recv.at(i*4),
-        ovd_recv.at(i*4));
+        avd_recv.at(i*4));
 
-        long long diff_between_full_frames = full_frame_send_time - full_frame_recv_time;
+        long long diff_between_full_frames = full_frame_recv_time - full_frame_send_time;
         total_time += diff_between_full_frames;
-
     }
+    std::cout << "full frames " << full_frames << ", total time " << total_time << std::endl;
     write_latency_results_to_file("latency_results", full_frames, total_time / (float)full_frames, 0, 0);
 
     std::cout << "Ending latency send test with " << full_frames << " full frames received" << std::endl;
@@ -223,6 +224,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     std::vector<long long> &send_times)
 {
     uint64_t current_frame = 0;
+    uint64_t temp_nalu = 0;
     uint64_t period = (uint64_t)((1000 * 1000 / fps) );
     uint8_t* bytes = (uint8_t*)cbuf;
     rtp_error_t ret = RTP_OK;
@@ -241,13 +243,15 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
             if ((ret = stream->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
                 std::cout << "Failed to send RTP frame!" << std::endl;
             }
+            current_frame += 1;
+            temp_nalu++;
 
-            if (fmt == V3C_GVD || fmt == V3C_AVD) { // If this is GVD or AVD stream, send 4 frames as fast as we can
-                if((current_frame + 1) % 4 != 0) {
+            if (fmt == V3C_GVD || fmt == V3C_AVD) { // If this is GVD or AVD stream, send 4 frames as fast as we can, then wait for framerates
+                if(temp_nalu < 4) {
                     continue;
                 }
+                temp_nalu = 0;
             }
-            current_frame += 1;
 
             // wait until is the time to send next latency test frame
             auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
