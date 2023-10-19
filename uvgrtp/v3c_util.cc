@@ -303,6 +303,16 @@ v3c_streams init_v3c_streams(uvgrtp::session* sess, uint16_t src_port, uint16_t 
     streams.ovd = sess->create_stream(src_port, dst_port, RTP_FORMAT_H265, flags);
     streams.gvd = sess->create_stream(src_port, dst_port, RTP_FORMAT_H265, flags);
     streams.avd = sess->create_stream(src_port, dst_port, RTP_FORMAT_H265, flags);
+
+    streams.gvd->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
+    streams.avd->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
+    streams.gvd->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
+    streams.avd->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000); 
+
+    streams.gvd->configure_ctx(RCC_RING_BUFFER_SIZE, 40 * 1000 * 1000);
+    streams.avd->configure_ctx(RCC_RING_BUFFER_SIZE, 40 * 1000 * 1000);
+    streams.gvd->configure_ctx(RCC_PKT_MAX_DELAY, 1000);
+    streams.avd->configure_ctx(RCC_PKT_MAX_DELAY, 1000);
     
     if (rec) {
         streams.vps->configure_ctx(RCC_REMOTE_SSRC, 1);
