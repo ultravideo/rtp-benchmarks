@@ -310,6 +310,12 @@ v3c_streams init_v3c_streams(uvgrtp::session* sess, uint16_t src_port, uint16_t 
         streams.ovd->configure_ctx(RCC_REMOTE_SSRC, 3);
         streams.gvd->configure_ctx(RCC_REMOTE_SSRC, 4);
         streams.avd->configure_ctx(RCC_REMOTE_SSRC, 5);
+
+        streams.vps->configure_ctx(RCC_SSRC, 11);
+        streams.ad->configure_ctx(RCC_SSRC, 22);
+        streams.ovd->configure_ctx(RCC_SSRC, 33);
+        streams.gvd->configure_ctx(RCC_SSRC, 44);
+        streams.avd->configure_ctx(RCC_SSRC, 55);
     }
     else {
         streams.vps->configure_ctx(RCC_SSRC, 1);
@@ -317,6 +323,12 @@ v3c_streams init_v3c_streams(uvgrtp::session* sess, uint16_t src_port, uint16_t 
         streams.ovd->configure_ctx(RCC_SSRC, 3);
         streams.gvd->configure_ctx(RCC_SSRC, 4);
         streams.avd->configure_ctx(RCC_SSRC, 5);
+
+        streams.vps->configure_ctx(RCC_REMOTE_SSRC, 11);
+        streams.ad->configure_ctx(RCC_REMOTE_SSRC, 22);
+        streams.ovd->configure_ctx(RCC_REMOTE_SSRC, 33);
+        streams.gvd->configure_ctx(RCC_REMOTE_SSRC, 44);
+        streams.avd->configure_ctx(RCC_REMOTE_SSRC, 55);
     }
     //streams.gvd->configure_ctx(RCC_FPS_NUMERATOR, 10);
     return streams;
