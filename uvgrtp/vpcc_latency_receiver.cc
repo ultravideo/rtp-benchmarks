@@ -31,7 +31,7 @@ void ad_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
         std::cout << "Error sending frame" << std::endl;
     }
     frame_received = true;
-    std::cout << "AD nal unit" << std::endl;
+    //std::cout << "AD nal unit" << std::endl;
     
 }
 

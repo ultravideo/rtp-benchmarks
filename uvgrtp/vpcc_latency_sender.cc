@@ -81,19 +81,17 @@ static void gvd_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
     gvd_frames_temp++;
-    if(gvd_frames_temp == gvd_frames + 4) {
-        gvd_frames++;
-        gvd_recv.push_back(get_current_time());
-    }
+    gvd_frames++;
+    gvd_recv.push_back(get_current_time());
+    
 }
 static void avd_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
     avd_frames_temp++;
-    if(avd_frames_temp == avd_frames + 4) {
-        avd_frames++;
-        avd_recv.push_back(get_current_time());
-    }
+    avd_frames++;
+    avd_recv.push_back(get_current_time());
+    
 }
 
 static int sender(std::string input_file, std::string local_address, int local_port, 
@@ -164,20 +162,35 @@ static int sender(std::string input_file, std::string local_address, int local_p
     /* calculate latencies */
 
     std::cout << "ad_send size " << ad_send.size() << " ad_recv size " << ad_recv.size() << std::endl;
-    std::cout << "ovd_send size " << ovd_send.size() << " ovd_recv size " << ovd_send.size() << std::endl;
-    std::cout << "gvd_send size " << gvd_send.size() << " gvd_recv size " << gvd_send.size() << std::endl;
-    std::cout << "avd_send size " << avd_send.size() << " avd_recv size " << avd_send.size() << std::endl;
+    std::cout << "ovd_send size " << ovd_send.size() << " ovd_recv size " << ovd_recv.size() << std::endl;
+    std::cout << "gvd_send size " << gvd_send.size() << " gvd_recv size " << gvd_recv.size() << std::endl;
+    std::cout << "avd_send size " << avd_send.size() << " avd_recv size " << avd_recv.size() << std::endl;
+    std::cout << "gvd_frames_temp " << gvd_frames_temp << std::endl;
+    std::cout << "avd_frames_temp " << avd_frames_temp << std::endl;
 
+    if(ad_send.size() ==  ad_recv.size()) {
+        std::cout << "AD stream complete" << std::endl;
+    }
+    if(gvd_send.size() ==  gvd_recv.size()) {
+        std::cout << "GVD stream complete" << std::endl;
+    }
+        if(ovd_send.size() ==  ovd_recv.size()) {
+        std::cout << "OVD stream complete" << std::endl;
+    }
+        if(avd_send.size() ==  avd_recv.size()) {
+        std::cout << "AVD stream complete" << std::endl;
+    }
 
     // Check for frame loss first
     if(ad_send.size() !=  ad_recv.size() ||
         ovd_send.size() !=  ovd_recv.size() ||
-        gvd_send.size() !=  gvd_frames_temp ||
-        avd_send.size() !=  avd_frames_temp ) 
+        gvd_send.size() !=  gvd_recv.size() ||
+        avd_send.size() !=  avd_recv.size() ) 
     {
         std::cout << "Frame loss, ignore results" << std::endl;
         return EXIT_SUCCESS;
     }
+    // TODO: still need to keep track of number of failed runs -----------------------------------
 
     // No frame loss -> total number of transferred FULL frames is equal to ad_send.size() (or any other)
     int full_frames = ad_send.size();
