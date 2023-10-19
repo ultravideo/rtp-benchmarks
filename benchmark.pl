@@ -256,6 +256,63 @@ sub recv_latency {
     $socket->close();
 }
 
+sub vpcc_send_latency {
+    
+    my ($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp) = @_;
+    my ($socket, $remote, $data);
+    print "VPCC latency send benchmark for $lib\n";
+    
+    unless(-e "./$lib/vpcc_latency_sender") {
+        die "The executable ./$lib/latency_sender has not been created! \n";
+    }
+    
+    $socket = mk_ssock($saddr, $port);
+    $remote = $socket->accept();
+    
+    my $logname = "latencies_$format" . "_RTP_$fps". "fps_$iter" . "rounds";
+    if ($srtp)
+    {
+        $logname = "latencies_$format" . "_SRTP_$fps". "fps_$iter" . "rounds";
+    }
+    
+
+    
+    my $result_file = "$lib/results/$logname";
+    unlink $result_file if -e $result_file; # erase old results if they exist
+    
+    for ((1 .. $iter)) {
+        print "Latency send benchmark round $_" . "/$iter\n";
+        $remote->recv($data, 16);
+        
+        my $exit_code = system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp 2>> $result_file 2>&1");
+        die "Latency sender failed! \n" if ($exit_code ne 0);
+    }
+    print "VPCC latency send benchmark finished\n";
+    $socket->close();
+}
+
+sub vpcc_recv_latency {
+    my ($lib, $saddr, $raddr, $port, $iter, $format, $srtp) = @_;
+    print "VPCC latency receive benchmark for $lib\n";
+    
+    unless(-e "./$lib/vpcc_latency_receiver") {
+        die "The executable ./$lib/latency_receiver has not been created! \n";
+    }
+    
+    my $socket = mk_rsock($saddr, $port);
+    
+    for ((1 .. $iter)) {
+        print "Latency receive benchmark round $_" . "/$iter\n";
+        sleep 1; # 1 s, make sure the sender has managed to catch up
+        $socket->send("start");
+        
+        my $exit_code = system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp");
+        die "Latency receiver failed! \n" if ($exit_code ne 0);
+    }
+    print "VPCC latency receive benchmark finished\n";
+    $socket->close();
+}
+
 # TODO explain every parameter
 sub print_help {
     print "usage (benchmark):\n  ./benchmark.pl \n"
@@ -317,7 +374,7 @@ die "Please specify role with --role" if !$role;
 
 
 die "library not supported\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
-die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266", "atlas"));
+die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266", "atlas", "vpcc"));
 
 $fps = 30.0 if $lat and !$fps;
 
@@ -352,8 +409,15 @@ if ($role eq "send" or $role eq "sender") {
     }
     
     if ($lat) {
-        system "make $lib" . "_latency_sender";
-        send_latency($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp);
+        if($format eq "vpcc") {
+            system "make $lib" . "_vpcc_latency_sender";
+            vpcc_send_latency($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp);  
+        }
+        else {
+            system "make $lib" . "_latency_sender";
+            send_latency($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp);  
+        }
+
     } else {
         if ($exec eq "default") {
             system "make $lib" . "_sender";
@@ -365,8 +429,14 @@ if ($role eq "send" or $role eq "sender") {
     die "Please specify test format with --format for receiver" if !$format;
     
     if ($lat) {
-        system "make $lib" . "_latency_receiver";
-        recv_latency($lib, $saddr, $raddr, $port, $iter, $format, $srtp);
+        if($format eq "vpcc") {
+            system "make $lib" . "_vpcc_latency_receiver";
+            vpcc_recv_latency($lib, $saddr, $raddr, $port, $iter, $format, $srtp);
+        }
+        else {
+            system "make $lib" . "_latency_receiver";
+            recv_latency($lib, $saddr, $raddr, $port, $iter, $format, $srtp);
+        }
     } elsif (!$nc) {
         if ($exec eq "default") {
             system "make $lib" . "_receiver";
