@@ -23,16 +23,22 @@ size_t avd_frames_temp = 0;
 
 std::atomic<uint64_t> full_frames = 0;
 
+std::vector<long long> ad_send = {};
+std::vector<long long> ovd_send = {};
+std::vector<long long> gvd_send = {};
+std::vector<long long> avd_send = {};
+    
+
 std::vector<long long> ad_recv = {};
 std::vector<long long> ovd_recv = {};
 std::vector<long long> gvd_recv = {};
 std::vector<long long> avd_recv = {};
 
-void sender_func(const uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, rtp_flags_t flags, int fmt,
-    float fps);
+void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float fps, const std::vector<v3c_unit_info> &units,
+    std::vector<long long> &send_times);
 
-    /*void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, rtp_flags_t flags, int fmt,
-    float fps, std::vector<long long>* send_times);*/
+    /*void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, int fmt,
+    float fps, std::vector<long long> &send_times);*/
 
 long long get_current_time() {
     auto time = std::chrono::high_resolution_clock::now();
@@ -107,6 +113,7 @@ static int sender(std::string input_file, std::string local_address, int local_p
     v3c_file_map mmap;
 
     mmap_v3c_file((char*)mem, len, mmap);
+    char* cbuf = (char*)mem;
     std::cout << "Starting latency send test with VPCC file" << std::endl;
     
     streams.ad->install_receive_hook(nullptr, ad_hook);
@@ -114,26 +121,18 @@ static int sender(std::string input_file, std::string local_address, int local_p
     streams.gvd->install_receive_hook(nullptr, gvd_hook);
     streams.avd->install_receive_hook(nullptr, avd_hook);
 
-    std::vector<long long> ad_send = {};
-    std::vector<long long> ovd_send = {};
-    std::vector<long long> gvd_send = {};
-    std::vector<long long> avd_send = {};
-    
-    void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, rtp_flags_t flags, int fmt,
-    float fps);
-
     /* Start sending data */
-    std::unique_ptr<std::thread> ad_thread = std::make_unique<std::thread>(sender_func, streams.ad, mem, mmap.ad_units, RTP_NO_FLAGS,
-        V3C_AD, fps);
+    std::unique_ptr<std::thread> ad_thread =
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.ad, cbuf, V3C_AD, fps, mmap.ad_units, std::ref(ad_send)));
 
-    std::unique_ptr<std::thread> ovd_thread = std::make_unique<std::thread>(sender_func, streams.ovd, mem, mmap.ovd_units, RTP_NO_H26X_SCL,
-        V3C_OVD, fps);
+    std::unique_ptr<std::thread> ovd_thread =
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.ovd, cbuf, V3C_OVD, fps, mmap.ovd_units, std::ref(ovd_send)));
 
-    std::unique_ptr<std::thread> gvd_thread = std::make_unique<std::thread>(sender_func, streams.gvd, mem, mmap.gvd_units, RTP_NO_H26X_SCL,
-        V3C_GVD, fps);
+    std::unique_ptr<std::thread> gvd_thread =
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.gvd, cbuf, V3C_GVD, fps, mmap.gvd_units, std::ref(gvd_send)));
 
-    std::unique_ptr<std::thread> avd_thread = std::make_unique<std::thread>(sender_func, streams.avd, mem, mmap.avd_units, RTP_NO_H26X_SCL,
-        V3C_AVD, fps);
+    std::unique_ptr<std::thread> avd_thread =
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.avd, cbuf, V3C_AVD, fps, mmap.avd_units, std::ref(avd_send)));
 
 
     if (ad_thread && ad_thread->joinable())
@@ -163,6 +162,12 @@ static int sender(std::string input_file, std::string local_address, int local_p
     rtp_ctx.destroy_session(sess);
 
     /* calculate latencies */
+
+    std::cout << "ad_send size " << ad_send.size() << " ad_recv size " << ad_recv.size() << std::endl;
+    std::cout << "ovd_send size " << ovd_send.size() << " ovd_recv size " << ovd_send.size() << std::endl;
+    std::cout << "gvd_send size " << gvd_send.size() << " gvd_recv size " << gvd_send.size() << std::endl;
+    std::cout << "avd_send size " << avd_send.size() << " avd_recv size " << avd_send.size() << std::endl;
+
 
     // Check for frame loss first
     if(ad_send.size() !=  ad_recv.size() ||
@@ -201,14 +206,13 @@ static int sender(std::string input_file, std::string local_address, int local_p
     return EXIT_SUCCESS;
 }
 
-void sender_func(const uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, rtp_flags_t flags, int fmt,
-    float fps)
+void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float fps, const std::vector<v3c_unit_info> &units,
+    std::vector<long long> &send_times)
 {
     uint64_t current_frame = 0;
     uint64_t period = (uint64_t)((1000 * 1000 / fps) );
     uint8_t* bytes = (uint8_t*)cbuf;
     rtp_error_t ret = RTP_OK;
-    std::vector<long long> send_times = {};
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     for (auto& p : units) {

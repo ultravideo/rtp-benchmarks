@@ -284,7 +284,7 @@ sub vpcc_send_latency {
         print "Latency send benchmark round $_" . "/$iter\n";
         $remote->recv($data, 16);
         
-        my $exit_code = system ("./$lib/latency_sender $file $saddr $port $raddr $port $fps $format $srtp 2>> $result_file 2>&1");
+        my $exit_code = system ("./$lib/vpcc_latency_sender $file $saddr $port $raddr $port $fps $format $srtp 2>> $result_file 2>&1");
         die "Latency sender failed! \n" if ($exit_code ne 0);
     }
     print "VPCC latency send benchmark finished\n";
@@ -306,7 +306,7 @@ sub vpcc_recv_latency {
         sleep 1; # 1 s, make sure the sender has managed to catch up
         $socket->send("start");
         
-        my $exit_code = system ("./$lib/latency_receiver $raddr $port $saddr $port $format $srtp");
+        my $exit_code = system ("./$lib/vpcc_latency_receiver $raddr $port $saddr $port $format $srtp");
         die "Latency receiver failed! \n" if ($exit_code ne 0);
     }
     print "VPCC latency receive benchmark finished\n";

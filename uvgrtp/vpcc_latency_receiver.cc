@@ -20,6 +20,19 @@ void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
         std::cout << "Error sending frame" << std::endl;
     }
     frame_received = true;
+
+}
+void ad_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
+{
+    // send the frame immediately back
+    uvgrtp::media_stream* receive = (uvgrtp::media_stream*)arg;
+
+    if((receive->push_frame(frame->payload, frame->payload_len, RTP_NO_H26X_SCL)) != RTP_OK) {
+        std::cout << "Error sending frame" << std::endl;
+    }
+    frame_received = true;
+    std::cout << "AD nal unit" << std::endl;
+    
 }
 
 int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port)
@@ -31,7 +44,7 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
     int flags = 0;
     v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, flags, true);
 
-    streams.ad->install_receive_hook(streams.ad, hook_receiver);
+    streams.ad->install_receive_hook(streams.ad, ad_hook_rec);
     streams.ovd->install_receive_hook(streams.ovd, hook_receiver);
     streams.gvd->install_receive_hook(streams.gvd, hook_receiver);
     streams.avd->install_receive_hook(streams.avd, hook_receiver);
@@ -42,7 +55,6 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
         std::this_thread::sleep_for(std::chrono::milliseconds(timout));
     }
     std::cout << "No more frames received for " << timout << " ms, end benchmark" << std::endl;
-    
     sess->destroy_stream(streams.ad);
     sess->destroy_stream(streams.ovd);
     sess->destroy_stream(streams.gvd);
