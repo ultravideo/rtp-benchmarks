@@ -98,6 +98,11 @@ int main(int argc, char **argv)
     {
         avd_thread->join();
     }
+    sess->destroy_stream(streams.ad);
+    sess->destroy_stream(streams.ovd);
+    sess->destroy_stream(streams.gvd);
+    sess->destroy_stream(streams.avd);
+    rtp_ctx.destroy_session(sess);
 
     size_t bytes_sent = 0;
     uint64_t diff = 0;

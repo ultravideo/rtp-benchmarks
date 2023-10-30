@@ -13,22 +13,23 @@
 #include <atomic>
 #include <chrono>
 
-struct thread_info {
-    size_t pkts;
-    size_t bytes;
-    std::chrono::high_resolution_clock::time_point start;
-    std::chrono::high_resolution_clock::time_point last;
-} *thread_info;
+int TIMEOUT = 1000;
+struct hook_args {
+    uvgrtp::media_stream* stream = nullptr;
+    stream_results* res = nullptr;
+};
 
-std::atomic<int> nready(0);
-std::atomic<int> frames_received(0);
-
-std::string result_filename = "";
+struct stream_results {
+    size_t packets_received = 0;
+    size_t bytes_received = 0;
+    std::chrono::high_resolution_clock::time_point start = 0;
+    std::chrono::high_resolution_clock::time_point last = 0;
+};
+bool frame_received = true;
+int gvd_nals = 0;
+int avd_nals = 0;
 
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame);
-
-void receiver_thread(int thread_num, int nthreads, std::string local_address, int local_port,
-    std::string remote_address, int remote_port, bool vvc, bool srtp, bool atlas);
 
 int main(int argc, char** argv)
 {
@@ -49,121 +50,67 @@ int main(int argc, char** argv)
     bool atlas_enabled  = get_atlas_state(argv[7]);
     bool srtp_enabled = get_srtp_state(argv[8]);
 
-    std::cout << "Starting uvgRTP receiver tests. " << local_address << ":" << local_port 
+    std::cout << "Starting uvgRTP V-PCC receiver tests. " << local_address << ":" << local_port 
         << "<-" << remote_address << ":" << remote_port << std::endl;
 
-    thread_info = (struct thread_info*)calloc(nthreads, sizeof(*thread_info));
-
-    std::vector<std::thread*> threads = {};
-    if(atlas_enabled) {
-        receiver_thread(0, 1, local_address, local_port, remote_address, remote_port, vvc_enabled, srtp_enabled, atlas_enabled);
-    }
-    else {
-        for (int i = 0; i < nthreads; ++i) {
-            threads.push_back(new std::thread(receiver_thread, i, nthreads, local_address, local_port,
-                remote_address, remote_port, vvc_enabled, srtp_enabled, atlas_enabled));
-        }
-
-        // wait all the thread executions to end and delete them
-        for (int i = 0; i < nthreads; ++i) {
-            if (threads[i]->joinable())
-            {
-                threads[i]->join();
-            }
-            delete threads[i];
-            threads[i] = nullptr;
-        }
-
-    }
-    return EXIT_SUCCESS;
-}
-
-void receiver_thread(int thread_num, int nthreads, std::string local_address, int local_port,
-    std::string remote_address, int remote_port, bool vvc, bool srtp, bool atlas)
-{
     uvgrtp::context rtp_ctx;
-    uvgrtp::session* session = nullptr;
-    uvgrtp::media_stream* receive = nullptr;
-    uint16_t thread_local_port = local_port + thread_num * 2;
-    uint16_t thread_remote_port = remote_port + thread_num * 2;
+    uvgrtp::session* sess = rtp_ctx.create_session(remote_address, local_address);
 
-    intialize_uvgrtp(rtp_ctx, &session, &receive, remote_address, local_address,
-        thread_local_port, thread_remote_port, srtp, vvc, false, atlas);
+    int flags = 0;
+    v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, flags, true);
 
-    int tid = thread_num / 2;
-    int previous_packets = 0;
-    if (receive->install_receive_hook(&tid, hook) == RTP_OK)
+    stream_results ad_r;
+    stream_results ovd_r;
+    stream_results gvd_r;
+    stream_results avd_r;
+
+    hook_args ad_a  = {streams.ad, &ad_r};
+    hook_args ovd_a = {streams.ovd, &ovd_r};
+    hook_args gvd_a = {streams.gvd, &gvd_r};
+    hook_args avd_a = {streams.avd, &avd_r};
+
+    streams.ad->install_receive_hook(&ad_a, ad_hook_rec);
+    streams.ovd->install_receive_hook(&ovd_a, hook_receiver);
+    streams.gvd->install_receive_hook(&gvd_a, gvd_hook_rec);
+    streams.avd->install_receive_hook(&avd_a, avd_hook_rec);
+    
+    while (frame_received)
     {
-        //std::cout << "Installed hook to port: " << thread_local_port << std::endl;
-
-        std::chrono::high_resolution_clock::time_point last_update = std::chrono::high_resolution_clock::now();
-
-        while (nready.load() < nthreads) {
-            
-            if (frames_received.load() != previous_packets)
-            {
-                previous_packets = frames_received.load();
-                last_update = std::chrono::high_resolution_clock::now();
-            }
-            else if (last_update + std::chrono::milliseconds(200) <= std::chrono::high_resolution_clock::now())
-            {
-                //std::cerr << "uvgRTP receiver timed out. No packets received for 2 s. Received "
-                //    << thread_info[tid].pkts << " frames in total" << std::endl;
-                write_receive_results_to_file(result_filename,
-                    thread_info[tid].bytes, thread_info[tid].pkts,
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        thread_info[tid].last - thread_info[tid].start).count());
-                break;
-            }
-
-            // sleep so we don't busy loop
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
+        frame_received = false;
+        std::this_thread::sleep_for(std::chrono::milliseconds(TIMEOUT));
     }
-    else
-    {
-        std::cerr << "Failed to install receive hook. Aborting test" << std::endl;
-    }
+    std::cout << "No more frames received for " << TIMEOUT << " ms, end benchmark" << std::endl;
 
-    cleanup_uvgrtp(rtp_ctx, session, receive);
+    sess->destroy_stream(streams.ad);
+    sess->destroy_stream(streams.ovd);
+    sess->destroy_stream(streams.gvd);
+    sess->destroy_stream(streams.avd);
+    rtp_ctx.destroy_session(sess);
+
+    // TODO: Calculate bitrates etc
+
+    return EXIT_SUCCESS;
 }
 
 void hook(void* arg, uvgrtp::frame::rtp_frame* frame)
 {
-    int tid = *(int*)arg;
+    hook_args* args = (hook_args*)arg;
+    stream_results* results = args->res;
 
-    if (thread_info[tid].pkts == 0)
-        thread_info[tid].start = std::chrono::high_resolution_clock::now();
+    if (results.packets_received == 0) {
+        results.start = std::chrono::high_resolution_clock::now();
+    }
 
-    /* receiver returns NULL to indicate that it has not received a frame in 10s
-     * and the sender has likely stopped sending frames long time ago so the benchmark
-     * can proceed to next run and ma*/
+
     if (!frame) {
-        fprintf(stderr, "discard %zu %zu %lu\n", thread_info[tid].bytes, thread_info[tid].pkts,
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                thread_info[tid].last - thread_info[tid].start
-                ).count()
-        );
-        nready++;
-
         std::cerr << "Receiver test failed!" << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         return;
     }
 
-    thread_info[tid].last = std::chrono::high_resolution_clock::now();
-    thread_info[tid].bytes += frame->payload_len;
-
+    results.last = std::chrono::high_resolution_clock::now();
+    results.bytes_received += frame->payload_len;
+    results.packets_received++;
     (void)uvg_rtp::frame::dealloc_frame(frame);
-    ++thread_info[tid].pkts;
-    ++frames_received; // so we detect a possible timeout
-
-    if (thread_info[tid].pkts == EXPECTED_FRAMES) {
-
-        write_receive_results_to_file(result_filename, 
-            thread_info[tid].bytes, thread_info[tid].pkts,
-            std::chrono::duration_cast<std::chrono::milliseconds>( 
-                thread_info[tid].last - thread_info[tid].start).count());
-        nready++;
-    }
+    frame_received = true;
 }
