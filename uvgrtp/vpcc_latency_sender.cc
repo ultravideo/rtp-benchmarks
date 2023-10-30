@@ -188,12 +188,13 @@ static int sender(std::string input_file, std::string local_address, int local_p
         avd_send.size() !=  avd_recv.size() ) 
     {
         std::cout << "Frame loss, ignore results" << std::endl;
+        write_latency_results_to_file("latency_results", 0, 0, 0, 0);
         return EXIT_SUCCESS;
     }
     // TODO: still need to keep track of number of failed runs -----------------------------------
 
     // No frame loss -> total number of transferred FULL frames is equal to ad_send.size() (or any other)
-    int full_frames = ad_send.size() + 1;
+    int full_frames = ad_send.size();
     float total_time = 0;
     for (auto i = 1; i < full_frames; ++i) {
         // Find the time when a full frame was sent. For GVD and AVD its every fourth NAL unit
@@ -230,7 +231,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     for (auto& p : units) {
-        for (auto i : p.nal_infos) {
+        for (auto& i : p.nal_infos) {
             uint8_t nalu_t = (bytes[i.location] >> 1) & 0x3f;
             if(fmt == V3C_AD && nalu_t > 35 ) { // Atlas streams: Skip non-ACL NAL units
                 continue;
@@ -242,14 +243,16 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
             if ((ret = stream->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
                 std::cout << "Failed to send RTP frame!" << std::endl;
             }
-            current_frame += 1;
             temp_nalu++;
-
-            if (fmt == V3C_GVD || fmt == V3C_AVD) { // If this is GVD or AVD stream, send 4 frames as fast as we can, then wait for framerates
+            if (fmt == V3C_GVD || fmt == V3C_AVD) { // If this is GVD or AVD stream, send 4 frames as fast as we can, then wait for frame interval
                 if(temp_nalu < 4) {
                     continue;
                 }
                 temp_nalu = 0;
+                current_frame += 1;
+            }
+            else {
+                current_frame += 1;
             }
 
             // wait until is the time to send next latency test frame
@@ -260,6 +263,18 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
                 std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
         }
     }
+}
+
+bool send_nal_units(uvgrtp::media_stream* stream, const char* cbuf, const v3c_unit_info &unit, int n_to_send)
+{
+    rtp_error_t ret = RTP_OK;
+    while (int i = 0; i < n_to_send; ++i) {
+        if ((ret = stream->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
+            std::cout << "Failed to send RTP frame!" << std::endl;
+            return false;
+        }
+    }
+    return true;
 }
 
 int main(int argc, char **argv)
