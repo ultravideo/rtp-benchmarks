@@ -178,20 +178,27 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     uint64_t period = (uint64_t)((1000 * 1000 / fps) );
     uint8_t* bytes = (uint8_t*)cbuf;
     rtp_error_t ret = RTP_OK;
+    bool param_set = false; // For parameter set NAL units
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     for (auto& p : units) {
         for (auto& i : p.nal_infos) {
+            param_set = false;
             uint8_t nalu_t = (bytes[i.location] >> 1) & 0x3f;
-            if(fmt == V3C_AD && nalu_t > 35 ) { // Atlas streams: Skip non-ACL NAL units
-                continue;
+            if(fmt == V3C_AD && nalu_t > 35 ) {
+                param_set = true;
             }
-            else if (nalu_t >= 32 && nalu_t <= 34) { // HEVC streams: Skip parameter set NAL units
-                continue;
+            else if (nalu_t >= 32 && nalu_t <= 34) {
+                param_set = true;
             }
-            send_times.push_back(get_current_time());
+            if(!param_set) {  // Only log send times for non-parameter set NAL units
+                send_times.push_back(get_current_time());
+            }
             if ((ret = stream->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
                 std::cout << "Failed to send RTP frame!" << std::endl;
+            }
+            if(param_set) { // If this is a parameter set NALU, immediately send the next NAL unit
+                continue;
             }
             temp_nalu++;
             if (fmt == V3C_GVD || fmt == V3C_AVD) { // If this is GVD or AVD stream, send 4 frames as fast as we can, then wait for frame interval
