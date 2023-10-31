@@ -104,11 +104,14 @@ int main(int argc, char **argv)
     sess->destroy_stream(streams.avd);
     rtp_ctx.destroy_session(sess);
 
-    size_t bytes_sent = 0;
-    uint64_t diff = 0;
-    // TODO: find results and write them
+    // Calculate results
+    size_t total_bytes_sent = ad_r.bytes_sent + ovd_r.bytes_sent + gvd_r.bytes_sent + avd_r.bytes_sent;
 
-    write_send_results_to_file(result_file, bytes_sent, diff);
+    long long start = find_earliest_time_point(ad_r.start, ovd_r.start, gvd_r.start, avd_r.start);
+    long long end   = find_latest_time_point(ad_r.end, ovd_r.end, gvd_r.end, avd_r.end);
+    long long diff = start - end;
+
+    write_send_results_to_file(result_file, total_bytes_sent, (uint64_t)diff);
     
     return EXIT_SUCCESS;
 }
@@ -120,7 +123,6 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     stream->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
     std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Wait a moment to make sure that the receiver is ready
 
-    uint64_t current_frame = 0;
     uint64_t temp_nalu = 0;
     uint64_t current_frame = 0;
     uint64_t period = (uint64_t)((1000 / (double)fps) * 1000);
@@ -130,7 +132,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     size_t bytes_sent = 0;
     // start the sending test
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-    res.start = start;
+    res.start = get_current_time();
 
     for (auto& p : units) {
         for (auto i : p.nal_infos) {
@@ -169,7 +171,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     }
     // here we take the time and see how long it actually
     auto end = std::chrono::high_resolution_clock::now();
-    res.end = end;
+    res.end = get_current_time();
     res.bytes_sent = bytes_sent;
     uint64_t diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 }

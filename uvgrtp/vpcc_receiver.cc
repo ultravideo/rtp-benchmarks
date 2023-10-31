@@ -14,17 +14,19 @@
 #include <chrono>
 
 int TIMEOUT = 1000;
+
+struct stream_results {
+    size_t packets_received = 0;
+    size_t bytes_received = 0;
+    long long start = 0;
+    long long last = 0;
+};
+
 struct hook_args {
     uvgrtp::media_stream* stream = nullptr;
     stream_results* res = nullptr;
 };
 
-struct stream_results {
-    size_t packets_received = 0;
-    size_t bytes_received = 0;
-    std::chrono::high_resolution_clock::time_point start = 0;
-    std::chrono::high_resolution_clock::time_point last = 0;
-};
 bool frame_received = true;
 int gvd_nals = 0;
 int avd_nals = 0;
@@ -39,7 +41,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    result_filename           = argv[1];
+    std::string result_filename           = argv[1];
     std::string local_address = argv[2];
     int local_port            = atoi(argv[3]);
     std::string remote_address = argv[4];
@@ -64,15 +66,17 @@ int main(int argc, char** argv)
     stream_results gvd_r;
     stream_results avd_r;
 
+    stream_results* net_results[4] = {&ad_r, &ovd_r, &gvd_r, &avd_r};
+
     hook_args ad_a  = {streams.ad, &ad_r};
     hook_args ovd_a = {streams.ovd, &ovd_r};
     hook_args gvd_a = {streams.gvd, &gvd_r};
     hook_args avd_a = {streams.avd, &avd_r};
 
-    streams.ad->install_receive_hook(&ad_a, ad_hook_rec);
-    streams.ovd->install_receive_hook(&ovd_a, hook_receiver);
-    streams.gvd->install_receive_hook(&gvd_a, gvd_hook_rec);
-    streams.avd->install_receive_hook(&avd_a, avd_hook_rec);
+    streams.ad->install_receive_hook(&ad_a, hook);
+    streams.ovd->install_receive_hook(&ovd_a, hook);
+    streams.gvd->install_receive_hook(&gvd_a, hook);
+    streams.avd->install_receive_hook(&avd_a, hook);
     
     while (frame_received)
     {
@@ -87,7 +91,15 @@ int main(int argc, char** argv)
     sess->destroy_stream(streams.avd);
     rtp_ctx.destroy_session(sess);
 
-    // TODO: Calculate bitrates etc
+    // Calculate results
+    long long start = find_earliest_time_point(ad_r.start, ovd_r.start, gvd_r.start, avd_r.start);
+    long long end   = find_latest_time_point(ad_r.last, ovd_r.last, gvd_r.last, avd_r.last);
+    long long diff = start - end;
+
+    size_t total_packets_received = ad_r.packets_received + ovd_r.packets_received + gvd_r.packets_received + avd_r.packets_received;
+    size_t total_bytes_received = ad_r.bytes_received + ovd_r.bytes_received + gvd_r.bytes_received + avd_r.bytes_received;
+
+    write_receive_results_to_file(result_filename, total_bytes_received, total_packets_received, diff);
 
     return EXIT_SUCCESS;
 }
@@ -97,10 +109,9 @@ void hook(void* arg, uvgrtp::frame::rtp_frame* frame)
     hook_args* args = (hook_args*)arg;
     stream_results* results = args->res;
 
-    if (results.packets_received == 0) {
-        results.start = std::chrono::high_resolution_clock::now();
+    if (results->packets_received == 0) {
+        results->start = get_current_time();
     }
-
 
     if (!frame) {
         std::cerr << "Receiver test failed!" << std::endl;
@@ -108,9 +119,9 @@ void hook(void* arg, uvgrtp::frame::rtp_frame* frame)
         return;
     }
 
-    results.last = std::chrono::high_resolution_clock::now();
-    results.bytes_received += frame->payload_len;
-    results.packets_received++;
+    results->last = get_current_time();
+    results->bytes_received += frame->payload_len;
+    results->packets_received++;
     (void)uvg_rtp::frame::dealloc_frame(frame);
     frame_received = true;
 }
