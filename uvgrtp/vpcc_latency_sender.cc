@@ -174,16 +174,16 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     std::vector<long long> &send_times)
 {
     uint64_t current_frame = 0;
-    uint64_t temp_nalu = 0;
+    uint64_t temp_nalu = 0; // GVD and AVD streams have 4 NAL units per frame. This variable is used to keep track of this
     uint64_t period = (uint64_t)((1000 * 1000 / fps) );
     uint8_t* bytes = (uint8_t*)cbuf;
     rtp_error_t ret = RTP_OK;
-    bool param_set = false; // For parameter set NAL units
+    bool param_set = false; // For parameter set NAL units, special treatment
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     for (auto& p : units) {
         for (auto& i : p.nal_infos) {
-            param_set = false;
+            param_set = false; // Check the type of this NAL unit
             uint8_t nalu_t = (bytes[i.location] >> 1) & 0x3f;
             if(fmt == V3C_AD && nalu_t > 35 ) {
                 param_set = true;
