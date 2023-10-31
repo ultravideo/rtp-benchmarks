@@ -12,7 +12,7 @@
 #include <iostream>
 #include <vector>
 
-struct stream_results {
+struct stream_results { // Save stats of each stream
     size_t bytes_sent = 0;
     uint64_t start = 0;
     uint64_t end = 0;
@@ -36,14 +36,13 @@ int main(int argc, char **argv)
     int local_port             = atoi(argv[4]);
     std::string remote_address = argv[5];
     int remote_port            = atoi(argv[6]);
-
-    //int nthreads               = atoi(argv[7]);
     int fps                    = atoi(argv[8]);
+    //int nthreads               = atoi(argv[7]);
     //bool vvc_enabled           = get_vvc_state(argv[9]);
     //bool atlas_enabled         = get_atlas_state(argv[9]);
     //bool srtp_enabled          = get_srtp_state(argv[10]);
 
-    std::cout << "Starting uvgRTP V-PCC sender tests. " << local_address << ":" << local_port
+    std::cout << "Starting uvgRTP V-PCC sender round. " << local_address << ":" << local_port
         << "->" << remote_address << ":" << remote_port << std::endl;
 
     uvgrtp::context rtp_ctx;

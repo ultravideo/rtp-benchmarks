@@ -15,22 +15,14 @@
 
 int TIMEOUT = 1000;
 
-struct stream_results {
+struct stream_results { // Save stats of each stream
     size_t packets_received = 0;
     size_t bytes_received = 0;
     long long start = 0;
     long long last = 0;
 };
 
-struct hook_args {
-    uvgrtp::media_stream* stream = nullptr;
-    stream_results* res = nullptr;
-};
-
 bool frame_received = true;
-int gvd_nals = 0;
-int avd_nals = 0;
-
 void hook(void* arg, uvg_rtp::frame::rtp_frame* frame);
 
 int main(int argc, char** argv)
@@ -66,15 +58,10 @@ int main(int argc, char** argv)
     stream_results gvd_r;
     stream_results avd_r;
 
-    hook_args ad_a  = {streams.ad, &ad_r};
-    hook_args ovd_a = {streams.ovd, &ovd_r};
-    hook_args gvd_a = {streams.gvd, &gvd_r};
-    hook_args avd_a = {streams.avd, &avd_r};
-
-    streams.ad->install_receive_hook(&ad_a, hook);
-    streams.ovd->install_receive_hook(&ovd_a, hook);
-    streams.gvd->install_receive_hook(&gvd_a, hook);
-    streams.avd->install_receive_hook(&avd_a, hook);
+    streams.ad->install_receive_hook(&ad_r, hook);
+    streams.ovd->install_receive_hook(&ovd_r, hook);
+    streams.gvd->install_receive_hook(&gvd_r, hook);
+    streams.avd->install_receive_hook(&avd_r, hook);
     
     while (frame_received)
     {
@@ -104,8 +91,7 @@ int main(int argc, char** argv)
 
 void hook(void* arg, uvgrtp::frame::rtp_frame* frame)
 {
-    hook_args* args = (hook_args*)arg;
-    stream_results* results = args->res;
+    stream_results* results = (stream_results*)arg;
 
     if (results->packets_received == 0) {
         results->start = get_current_time();

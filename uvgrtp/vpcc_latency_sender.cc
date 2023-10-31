@@ -127,12 +127,13 @@ static int sender(std::string input_file, std::string local_address, int local_p
     sess->destroy_stream(streams.avd);
     rtp_ctx.destroy_session(sess);
 
-    // Check for frame loss first
+    // Debug prints
     std::cout << "ad_send size " << ad_send.size() << " ad_recv size " << ad_recv.size() << std::endl;
     std::cout << "ovd_send size " << ovd_send.size() << " ovd_recv size " << ovd_recv.size() << std::endl;
     std::cout << "gvd_send size " << gvd_send.size() << " gvd_recv size " << gvd_recv.size() << std::endl;
     std::cout << "avd_send size " << avd_send.size() << " avd_recv size " << avd_recv.size() << std::endl;
 
+    // Check for frame loss
     if(ad_send.size() !=  ad_recv.size() ||
         ovd_send.size() !=  ovd_recv.size() ||
         gvd_send.size() !=  gvd_recv.size() ||
@@ -146,12 +147,12 @@ static int sender(std::string input_file, std::string local_address, int local_p
     // No frame loss -> total number of transferred FULL frames is equal to ad_send.size() (or any other)
     int full_frames = ad_send.size();
     float total_time = 0;
-    for (auto i = 1; i < full_frames; ++i) {
+    for (auto i = 0; i < full_frames; ++i) {
         // Find the time when a full frame was sent. For GVD and AVD its every fourth NAL unit
-        auto full_frame_send_time = find_earliest_time_point(ad_send.at(i - 1),
-        ovd_send.at(i - 1),
-        gvd_send.at((i-1)*4),
-        avd_send.at((i-1)*4));
+        auto full_frame_send_time = find_earliest_time_point(ad_send.at(i),
+        ovd_send.at(i),
+        gvd_send.at((i)*4),
+        avd_send.at((i)*4));
 
         // Find the time when reception of a full frame was completed
         auto full_frame_recv_time = find_latest_time_point(ad_recv.at(i),
