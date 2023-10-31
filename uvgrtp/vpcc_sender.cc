@@ -37,11 +37,11 @@ int main(int argc, char **argv)
     std::string remote_address = argv[5];
     int remote_port            = atoi(argv[6]);
 
-    int nthreads               = atoi(argv[7]);
+    //int nthreads               = atoi(argv[7]);
     int fps                    = atoi(argv[8]);
-    bool vvc_enabled           = get_vvc_state(argv[9]);
-    bool atlas_enabled         = get_atlas_state(argv[9]);
-    bool srtp_enabled          = get_srtp_state(argv[10]);
+    //bool vvc_enabled           = get_vvc_state(argv[9]);
+    //bool atlas_enabled         = get_atlas_state(argv[9]);
+    //bool srtp_enabled          = get_srtp_state(argv[10]);
 
     std::cout << "Starting uvgRTP V-PCC sender tests. " << local_address << ":" << local_port
         << "->" << remote_address << ":" << remote_port << std::endl;
@@ -61,7 +61,6 @@ int main(int argc, char **argv)
 
     mmap_v3c_file((char*)mem, len, mmap);
     char* cbuf = (char*)mem;
-    rtp_flags_t rtp_flags = RTP_NO_H26X_SCL;
 
     stream_results ad_r  = {0,0,0};
     stream_results ovd_r = {0,0,0};
@@ -109,7 +108,7 @@ int main(int argc, char **argv)
 
     long long start = find_earliest_time_point(ad_r.start, ovd_r.start, gvd_r.start, avd_r.start);
     long long end   = find_latest_time_point(ad_r.end, ovd_r.end, gvd_r.end, avd_r.end);
-    long long diff = start - end;
+    long long diff = end - start;
 
     write_send_results_to_file(result_file, total_bytes_sent, (uint64_t)diff);
     
@@ -170,8 +169,8 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
         }
     }
     // here we take the time and see how long it actually
-    auto end = std::chrono::high_resolution_clock::now();
+    //auto end = std::chrono::high_resolution_clock::now();
     res.end = get_current_time();
     res.bytes_sent = bytes_sent;
-    uint64_t diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    //uint64_t diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 }

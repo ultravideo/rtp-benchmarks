@@ -47,10 +47,10 @@ int main(int argc, char** argv)
     std::string remote_address = argv[4];
     int remote_port            = atoi(argv[5]);
 
-    int nthreads               = atoi(argv[6]);
-    bool vvc_enabled  = get_vvc_state(argv[7]);
-    bool atlas_enabled  = get_atlas_state(argv[7]);
-    bool srtp_enabled = get_srtp_state(argv[8]);
+    //int nthreads               = atoi(argv[6]);
+    //bool vvc_enabled  = get_vvc_state(argv[7]);
+    //bool atlas_enabled  = get_atlas_state(argv[7]);
+    //bool srtp_enabled = get_srtp_state(argv[8]);
 
     std::cout << "Starting uvgRTP V-PCC receiver tests. " << local_address << ":" << local_port 
         << "<-" << remote_address << ":" << remote_port << std::endl;
@@ -65,8 +65,6 @@ int main(int argc, char** argv)
     stream_results ovd_r;
     stream_results gvd_r;
     stream_results avd_r;
-
-    stream_results* net_results[4] = {&ad_r, &ovd_r, &gvd_r, &avd_r};
 
     hook_args ad_a  = {streams.ad, &ad_r};
     hook_args ovd_a = {streams.ovd, &ovd_r};
@@ -83,7 +81,7 @@ int main(int argc, char** argv)
         frame_received = false;
         std::this_thread::sleep_for(std::chrono::milliseconds(TIMEOUT));
     }
-    std::cout << "No more frames received for " << TIMEOUT << " ms, end benchmark" << std::endl;
+    std::cout << "No more frames received for " << TIMEOUT << " ms, end round" << std::endl;
 
     sess->destroy_stream(streams.ad);
     sess->destroy_stream(streams.ovd);
@@ -94,7 +92,7 @@ int main(int argc, char** argv)
     // Calculate results
     long long start = find_earliest_time_point(ad_r.start, ovd_r.start, gvd_r.start, avd_r.start);
     long long end   = find_latest_time_point(ad_r.last, ovd_r.last, gvd_r.last, avd_r.last);
-    long long diff = start - end;
+    long long diff = end - start;
 
     size_t total_packets_received = ad_r.packets_received + ovd_r.packets_received + gvd_r.packets_received + avd_r.packets_received;
     size_t total_bytes_received = ad_r.bytes_received + ovd_r.bytes_received + gvd_r.bytes_received + avd_r.bytes_received;

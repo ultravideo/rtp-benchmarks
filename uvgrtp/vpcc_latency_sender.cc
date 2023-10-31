@@ -40,31 +40,6 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     /*void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, int fmt,
     float fps, std::vector<long long> &send_times);*/
 
-long long get_current_time() {
-    auto time = std::chrono::high_resolution_clock::now();
-    auto since_epoch = std::chrono::time_point_cast<std::chrono::milliseconds>(time);
-    auto duration = since_epoch.time_since_epoch();
-    return duration.count();
-}
-
-long long find_earliest_time_point(
-    const long long& t1,
-    const long long& t2,
-    const long long& t3,
-    const long long& t4) {
-
-    return std::min(std::min(std::min(t1, t2), t3), t4);
-}
-
-long long find_latest_time_point(
-    const long long& t1,
-    const long long& t2,
-    const long long& t3,
-    const long long& t4) {
-
-    return std::max(std::max(std::max(t1, t2), t3), t4);
-}
-
 static void ad_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
@@ -263,18 +238,6 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
                 std::this_thread::sleep_for(std::chrono::microseconds(current_frame * period - runtime));
         }
     }
-}
-
-bool send_nal_units(uvgrtp::media_stream* stream, const char* cbuf, const v3c_unit_info &unit, int n_to_send)
-{
-    rtp_error_t ret = RTP_OK;
-    while (int i = 0; i < n_to_send; ++i) {
-        if ((ret = stream->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
-            std::cout << "Failed to send RTP frame!" << std::endl;
-            return false;
-        }
-    }
-    return true;
 }
 
 int main(int argc, char **argv)

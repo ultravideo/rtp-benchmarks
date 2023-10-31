@@ -159,7 +159,7 @@ sub recv_benchmark {
 }
 
 sub vpcc_send_benchmark {
-    print "V-PCC Starting send benchmark\n";
+    print "V-PCC benchmark sender\n";
 
     my ($lib, $file, $saddr, $raddr, $port, $iter, $threads, $gen_recv, $e, $format, $srtp, @fps_vals) = @_;
     my ($socket, $remote, $data);
@@ -212,12 +212,12 @@ sub vpcc_send_benchmark {
         }
     }
 
-    print "V-PCC send benchmark finished\n";
+    print "V-PCC benchmark sender finished\n";
     $socket->close();
 }
 
 sub vpcc_recv_benchmark {
-    print "V-PCC Receive benchmark\n";
+    print "V-PCC benchmark receiver\n";
     my ($lib, $saddr, $raddr, $port, $iter, $threads, $e, $format, $srtp, @fps_vals) = @_;
     
     print "Connecting to the TCP socket of the sender\n";
@@ -259,14 +259,14 @@ sub vpcc_recv_benchmark {
                     print "Starting to benchmark receive at $fps fps, round $_\n";
                     $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
                     # please note that the local address for receiver is raddr
-                    my $exit_code = system ("(time ./$lib/receiver $result_file $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
+                    my $exit_code = system ("(time ./$lib/vpcc_receiver $result_file $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
                     die "Receiver failed! \n" if ($exit_code ne 0);
                 }
             }
         }
     }
 
-    print "V-PCC receive benchmark finished\n";
+    print "V-PCC benchmark receiver finished\n";
     $socket->close();
 }
 
@@ -534,7 +534,7 @@ if ($role eq "send" or $role eq "sender") {
         if($format eq "vpcc") {
             if ($exec eq "default") {
                 system "make $lib" . "_vpcc_sender";
-                $exec = "sender";
+                $exec = "vpcc_sender";
             }
             vpcc_send_benchmark($lib, $file, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
         }
@@ -562,7 +562,7 @@ if ($role eq "send" or $role eq "sender") {
         if($format eq "vpcc") {
             if ($exec eq "default") {
                 system "make $lib" . "_vpcc_receiver";
-                $exec = "receiver";
+                $exec = "vpcc_receiver";
             }
             vpcc_recv_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $exec, $format, $srtp, @fps_vals);
         }
