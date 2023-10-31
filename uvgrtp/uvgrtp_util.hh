@@ -80,3 +80,28 @@ void cleanup_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session* session, uvgrtp::
         rtp_ctx.destroy_session(session);
     }
 }
+
+long long get_current_time() {
+    auto time = std::chrono::high_resolution_clock::now();
+    auto since_epoch = std::chrono::time_point_cast<std::chrono::milliseconds>(time);
+    auto duration = since_epoch.time_since_epoch();
+    return duration.count();
+}
+
+long long find_earliest_time_point(
+    const long long& t1,
+    const long long& t2,
+    const long long& t3,
+    const long long& t4) {
+
+    return std::min(std::min(std::min(t1, t2), t3), t4);
+}
+
+long long find_latest_time_point(
+    const long long& t1,
+    const long long& t2,
+    const long long& t3,
+    const long long& t4) {
+
+    return std::max(std::max(std::max(t1, t2), t3), t4);
+}
