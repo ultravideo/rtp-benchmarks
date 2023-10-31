@@ -11,18 +11,6 @@
 #include <chrono>
 #include <vector>
 
-std::chrono::high_resolution_clock::time_point frame_send_time;
-
-size_t ad_frames = 0;
-size_t ovd_frames = 0;
-size_t gvd_frames = 0;
-size_t avd_frames = 0;
-
-size_t gvd_frames_temp = 0;
-size_t avd_frames_temp = 0;
-
-std::atomic<uint64_t> full_frames = 0;
-
 std::vector<long long> ad_send = {};
 std::vector<long long> ovd_send = {};
 std::vector<long long> gvd_send = {};
@@ -37,36 +25,29 @@ std::vector<long long> avd_recv = {};
 void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float fps, const std::vector<v3c_unit_info> &units,
     std::vector<long long> &send_times);
 
-    /*void sender_func(uvgrtp::media_stream* stream, const char* cbuf, const std::vector<v3c_unit_info> &units, int fmt,
-    float fps, std::vector<long long> &send_times);*/
-
 static void ad_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
-    ad_frames++;
     ad_recv.push_back(get_current_time());
+    (void)uvg_rtp::frame::dealloc_frame(frame);
 }
 static void ovd_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
-    ovd_frames++;
     ovd_recv.push_back(get_current_time());
+    (void)uvg_rtp::frame::dealloc_frame(frame);
 }
 static void gvd_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
-    gvd_frames_temp++;
-    gvd_frames++;
     gvd_recv.push_back(get_current_time());
-    
+    (void)uvg_rtp::frame::dealloc_frame(frame);
 }
 static void avd_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
-    avd_frames_temp++;
-    avd_frames++;
     avd_recv.push_back(get_current_time());
-    
+    (void)uvg_rtp::frame::dealloc_frame(frame);
 }
 
 static int sender(std::string input_file, std::string local_address, int local_port, 
@@ -140,21 +121,6 @@ static int sender(std::string input_file, std::string local_address, int local_p
     std::cout << "ovd_send size " << ovd_send.size() << " ovd_recv size " << ovd_recv.size() << std::endl;
     std::cout << "gvd_send size " << gvd_send.size() << " gvd_recv size " << gvd_recv.size() << std::endl;
     std::cout << "avd_send size " << avd_send.size() << " avd_recv size " << avd_recv.size() << std::endl;
-    std::cout << "gvd_frames_temp " << gvd_frames_temp << std::endl;
-    std::cout << "avd_frames_temp " << avd_frames_temp << std::endl;
-
-    if(ad_send.size() ==  ad_recv.size()) {
-        std::cout << "AD stream complete" << std::endl;
-    }
-    if(gvd_send.size() ==  gvd_recv.size()) {
-        std::cout << "GVD stream complete" << std::endl;
-    }
-        if(ovd_send.size() ==  ovd_recv.size()) {
-        std::cout << "OVD stream complete" << std::endl;
-    }
-        if(avd_send.size() ==  avd_recv.size()) {
-        std::cout << "AVD stream complete" << std::endl;
-    }
 
     // Check for frame loss first
     if(ad_send.size() !=  ad_recv.size() ||
