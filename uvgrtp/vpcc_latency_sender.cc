@@ -10,6 +10,28 @@
 #include <string>
 #include <chrono>
 #include <vector>
+struct send_nal_info {
+    uint64_t index = 0;
+    uint8_t nal_type = 0;
+    long long send_time = 0;
+    size_t nal_size = 0;
+};
+struct recv_nal_info {
+    uint64_t index = 0;
+    uint8_t nal_type = 0;
+    long long recv_time = 0;
+    size_t nal_size = 0;
+};
+
+std::vector<send_nal_info> ad_nals_s = {};
+std::vector<send_nal_info> ovd_nals_s = {};
+std::vector<send_nal_info> gvd_nals_s = {};
+std::vector<send_nal_info> avd_nals_s = {};
+
+std::vector<recv_nal_info> ad_nals_r = {};
+std::vector<recv_nal_info> ovd_nals_r = {};
+std::vector<recv_nal_info> gvd_nals_r = {};
+std::vector<recv_nal_info> avd_nals_r = {};
 
 std::vector<long long> ad_send = {};
 std::vector<long long> ovd_send = {};
@@ -23,7 +45,7 @@ std::vector<long long> gvd_recv = {};
 std::vector<long long> avd_recv = {};
 
 void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float fps, const std::vector<v3c_unit_info> &units,
-    std::vector<long long> &send_times);
+    std::vector<long long> &send_times, std::vector<send_nal_info> &send_info);
 
 static void ad_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
@@ -59,6 +81,7 @@ static void avd_hook(void *arg, uvg_rtp::frame::rtp_frame *frame)
     if (nalu_t < 32 || nalu_t > 34) { // HEVC streams: only log time for VCL NAL units
         avd_recv.push_back(get_current_time());
     }
+    avd_nals_r.push_back({avd_nals_r.size(), nalu_t, get_current_time(), frame->payload_len});
     (void)uvg_rtp::frame::dealloc_frame(frame);
 }
 
@@ -89,16 +112,16 @@ static int sender(std::string input_file, std::string local_address, int local_p
 
     /* Start sending data */
     std::unique_ptr<std::thread> ad_thread =
-        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.ad, cbuf, V3C_AD, fps, mmap.ad_units, std::ref(ad_send)));
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.ad, cbuf, V3C_AD, fps, mmap.ad_units, std::ref(ad_send), std::ref(ad_nals_s)));
 
     std::unique_ptr<std::thread> ovd_thread =
-        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.ovd, cbuf, V3C_OVD, fps, mmap.ovd_units, std::ref(ovd_send)));
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.ovd, cbuf, V3C_OVD, fps, mmap.ovd_units, std::ref(ovd_send), std::ref(ovd_nals_s)));
 
     std::unique_ptr<std::thread> gvd_thread =
-        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.gvd, cbuf, V3C_GVD, fps, mmap.gvd_units, std::ref(gvd_send)));
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.gvd, cbuf, V3C_GVD, fps, mmap.gvd_units, std::ref(gvd_send), std::ref(gvd_nals_s)));
 
     std::unique_ptr<std::thread> avd_thread =
-        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.avd, cbuf, V3C_AVD, fps, mmap.avd_units, std::ref(avd_send)));
+        std::unique_ptr<std::thread>(new std::thread(sender_func, streams.avd, cbuf, V3C_AVD, fps, mmap.avd_units, std::ref(avd_send), std::ref(avd_nals_s)));
 
 
     if (ad_thread && ad_thread->joinable())
@@ -164,15 +187,23 @@ static int sender(std::string input_file, std::string local_address, int local_p
         total_time += diff_between_full_frames;
     }
     std::cout << "full frames " << full_frames << ", total time " << total_time << std::endl;
-    write_latency_results_to_file("latency_results", full_frames, total_time / (float)full_frames, 0, 0);
+    write_latency_results_to_file("latency_results", full_frames, total_time / 1000 / (float)full_frames, 0, 0);
 
     std::cout << "Ending latency send test with " << full_frames << " full frames received" << std::endl;
 
+    // DEBUG PRINTS
+    /*for(auto i = 0; i < avd_recv.size(); ++i) {
+        std::cout << i << " send " << avd_send.at(i) << " us recv " << avd_recv.at(i) << " us diff " << avd_recv.at(i) - avd_send.at(i) << " us" << std::en>
+    }*/
+    for(auto i = 0; i < avd_nals_s.size(); ++i) {
+        std::cout << i << " send " << avd_nals_s.at(i).send_time << " us recv " << avd_nals_r.at(i).recv_time << " us diff " << avd_nals_r.at(i).recv_time - avd_nals_s.at(i).send_time << " us " << "send nalu_t " << (uint32_t)avd_nals_s.at(i).nal_type << " recv nalu_t " << (uint32_t)avd_nals_r.at(i).nal_type <<
+        " send size " << avd_nals_s.at(i).nal_size << " recv size " << avd_nals_r.at(i).nal_size << std::endl;
+    }
     return EXIT_SUCCESS;
 }
 
 void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float fps, const std::vector<v3c_unit_info> &units,
-    std::vector<long long> &send_times)
+    std::vector<long long> &send_times, std::vector<send_nal_info> &send_info)
 {
     uint64_t current_frame = 0;
     uint64_t temp_nalu = 0; // GVD and AVD streams have 4 NAL units per frame. This variable is used to keep track of this
@@ -195,6 +226,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
             if(!param_set) {  // Only log send times for non-parameter set NAL units
                 send_times.push_back(get_current_time());
             }
+            send_info.push_back({send_info.size(), nalu_t, get_current_time(), i.size});
             if ((ret = stream->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
                 std::cout << "Failed to send RTP frame!" << std::endl;
             }

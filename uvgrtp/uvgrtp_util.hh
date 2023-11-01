@@ -83,7 +83,7 @@ void cleanup_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session* session, uvgrtp::
 
 long long get_current_time() {
     auto time = std::chrono::high_resolution_clock::now();
-    auto since_epoch = std::chrono::time_point_cast<std::chrono::milliseconds>(time);
+    auto since_epoch = std::chrono::time_point_cast<std::chrono::microseconds>(time);
     auto duration = since_epoch.time_since_epoch();
     return duration.count();
 }
