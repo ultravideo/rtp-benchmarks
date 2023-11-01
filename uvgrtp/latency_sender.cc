@@ -244,48 +244,6 @@ static int sender(std::string input_file, std::string local_address, int local_p
     write_latency_results_to_file("latency_results", frames, total_intra / (float)nintras, total_inter / (float)ninters,
         total / (float)frames);
 
-    // DEBUG CODE:
-        for(int i = 0; i < send_times.size(); ++i) {
-            long long diff_from_last = 0;
-            if(i > 0) {
-                diff_from_last = send_times.at(i) - send_times.at(i-1);
-            }
-        std::cout << send_times[i] << ", diff from last " << diff_from_last << std::endl;
-    }
-
-    // after send times
-        for(int i = 0; i < after_send_times.size(); ++i) {
-        long long diff_from_last = 0;
-            if(i > 0) {
-                diff_from_last = after_send_times.at(i) - after_send_times.at(i-1);
-            }
-        std::cout << after_send_times[i] << ", diff from last (after send times) " << diff_from_last << std::endl;
-    }
-
-    for(uint64_t i : diff_times) {
-        std::cout << "diff " << i << std::endl;
-    }
-    for(int i = 0; i < recv_times.size(); ++i) {
-        long long diff_from_last = 0;
-        if(i > 0) {
-            diff_from_last = recv_times.at(i) - recv_times.at(i-1);
-        }
-        std::cout << recv_times.at(i) << ", diff from last " << diff_from_last << std::endl;
-    }
-
-    // calculate latencies
-    if(total_frames_received >= current_frame) {
-        for(int i = 0; i < intra_recv.size(); ++i) {
-            long long diff = intra_recv.at(i) - intra_send.at(i);
-            std::cout << "intra diff " << diff << std::endl;
-        }
-        for(int i = 0; i < inter_recv.size(); ++i) {
-            long long diff = inter_recv.at(i) - inter_send.at(i);
-            std::cout << "inter diff " << diff << std::endl;
-        }
-    }
-    
-
     std::cout << "Ending latency send test with " << total_frames_received << " frames received" << std::endl;
 
     return EXIT_SUCCESS;

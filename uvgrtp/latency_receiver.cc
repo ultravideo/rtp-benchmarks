@@ -12,8 +12,6 @@
 bool frame_received = true;
 int total_frames_received = 0;
 bool atlas_enabled = false;
-std::vector<long long> send_times = {};
-
 
 void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
@@ -23,11 +21,6 @@ void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
     if(atlas_enabled) {
         flags = RTP_NO_H26X_SCL;
     }
-    auto frame_send_time = std::chrono::high_resolution_clock::now();
-    auto timeSinceEpoch = std::chrono::time_point_cast<std::chrono::milliseconds>(frame_send_time);
-    auto duration = timeSinceEpoch.time_since_epoch();
-    long long ms = duration.count();
-    send_times.push_back(ms);
     if((receive->push_frame(frame->payload, frame->payload_len, flags)) != RTP_OK) {
         std::cout << "Error sending frame" << std::endl;
     }
@@ -59,13 +52,6 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
     {
         std::cout << "Received " << total_frames_received << " frames. No more frames received for "
             << timout << " ms." << std::endl;
-    }
-    for(int i = 0; i < send_times.size(); ++i) {
-        long long diff_from_last = 0;
-        if(i > 0) {
-            diff_from_last = send_times.at(i) - send_times.at(i-1);
-        }
-        std::cout << send_times.at(i) << ", diff from last " << diff_from_last << std::endl;
     }
     cleanup_uvgrtp(rtp_ctx, session, receive);
 

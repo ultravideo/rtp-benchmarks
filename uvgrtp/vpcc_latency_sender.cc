@@ -195,10 +195,10 @@ static int sender(std::string input_file, std::string local_address, int local_p
     /*for(auto i = 0; i < avd_recv.size(); ++i) {
         std::cout << i << " send " << avd_send.at(i) << " us recv " << avd_recv.at(i) << " us diff " << avd_recv.at(i) - avd_send.at(i) << " us" << std::en>
     }*/
-    for(auto i = 0; i < avd_nals_s.size(); ++i) {
+    /*for(auto i = 0; i < avd_nals_s.size(); ++i) {
         std::cout << i << " send " << avd_nals_s.at(i).send_time << " us recv " << avd_nals_r.at(i).recv_time << " us diff " << avd_nals_r.at(i).recv_time - avd_nals_s.at(i).send_time << " us " << "send nalu_t " << (uint32_t)avd_nals_s.at(i).nal_type << " recv nalu_t " << (uint32_t)avd_nals_r.at(i).nal_type <<
         " send size " << avd_nals_s.at(i).nal_size << " recv size " << avd_nals_r.at(i).nal_size << std::endl;
-    }
+    }*/
     return EXIT_SUCCESS;
 }
 
