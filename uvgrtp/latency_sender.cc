@@ -57,7 +57,7 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
         }
         else
         {
-            switch ((frame->payload[0] >> 1) & 0x3f) {
+            switch ((frame->payload[4] >> 1) & 0x3f) {
                 case 19: // intra frame
                     diff = get_diff();
                     total += (diff / 1000);
