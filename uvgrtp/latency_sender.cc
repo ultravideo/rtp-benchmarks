@@ -43,13 +43,6 @@ uint64_t get_diff()
         ).count();
 }
 
-long long get_current_time() {
-    auto time = std::chrono::high_resolution_clock::now();
-    auto since_epoch = std::chrono::time_point_cast<std::chrono::milliseconds>(time);
-    auto duration = since_epoch.time_since_epoch();
-    return duration.count();
-}
-
 static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
 {
     (void)arg;
