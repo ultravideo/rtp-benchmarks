@@ -127,6 +127,13 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
     uint8_t* bytes = (uint8_t*)cbuf;
     rtp_error_t ret = RTP_OK;
     bool param_set = false; // For parameter set NAL units, special treatment
+    /* Sending logic goes as follows:
+    -Check NAL unit type:
+     -Parameter set NAL units: DO NOT log time, send unit and immediately proceed to the next NAL unit.
+     -AD or OVD stream: Each frame is composed of a single NAL unit. Log time, send unit and wait for the remaining interval depending on frame rate
+     -GVD or AVD stream: Each frame is composed of 4 NAL units. Log send time of first one and send the remaining 3 as fast
+      as possible. Then wait for the interval. Note: The send times of the remaining 3 also get logged, but only the first one is currently used in
+      calculations, as it is the "start" of the frame. */
 
     size_t bytes_sent = 0;
     // start the sending test
@@ -137,10 +144,10 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
         for (auto i : p.nal_infos) {
             param_set = false; // Check the type of this NAL unit
             uint8_t nalu_t = (bytes[i.location] >> 1) & 0x3f;
-            if(fmt == V3C_AD && nalu_t > 35 ) {
+            if(fmt == V3C_AD && nalu_t > 35 ) { // Check if Atlas parameter set NAL unit 
                 param_set = true;
             }
-            else if (nalu_t >= 32 && nalu_t <= 34) {
+            else if (nalu_t >= 32 && nalu_t <= 34) { // Check if video parameter set NAL unit 
                 param_set = true;
             }
             if ((ret = stream->push_frame(bytes + i.location, i.size, RTP_NO_H26X_SCL)) != RTP_OK) {
@@ -150,7 +157,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
             if(param_set) { // If this is a parameter set NALU, immediately send the next NAL unit
                 continue;
             }
-            temp_nalu++;
+            temp_nalu++; // temp_nalu used to count the temporary 4 NAL units that make up a GVD or AVD frame
             if (fmt == V3C_GVD || fmt == V3C_AVD) { // If this is GVD or AVD stream, send 4 frames as fast as we can, then wait for frame interval
                 if(temp_nalu < 4) {
                     continue;
@@ -159,6 +166,7 @@ void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float 
                 current_frame += 1;
             }
             else {
+                temp_nalu = 0;
                 current_frame += 1;
             }
             auto runtime = (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
