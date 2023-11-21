@@ -111,18 +111,19 @@ bool mmap_v3c_file(char* cbuf, uint64_t len, v3c_file_map &mmap)
                 return EXIT_FAILURE;
             }
             v3c_ptr += nal_size_precision;
+            /* debug prints
             switch (vuh_t) {
             case V3C_AD:
             case V3C_CAD:
-                //std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << std::endl;
+                std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << std::endl;
                 break;
             case V3C_OVD:
             case V3C_GVD:
             case V3C_AVD:
             case V3C_PVD:
                 uint8_t h265_nalu_t = (cbuf[v3c_ptr] & 0b01111110) >> 1;
-                //std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << ", HEVC NALU type: " << (uint32_t)h265_nalu_t << std::endl;
-            }
+                std::cout << "  -- v3c_ptr: " << v3c_ptr << ", NALU size: " << combined_nal_size << ", HEVC NALU type: " << (uint32_t)h265_nalu_t << std::endl;
+            }*/
             unit.nal_infos.push_back({ v3c_ptr, combined_nal_size });
             v3c_ptr += combined_nal_size;
 
@@ -283,7 +284,7 @@ v3c_streams init_v3c_streams(uvgrtp::session* sess, uint16_t src_port, uint16_t 
 {
     flags |= RCE_NO_H26X_PREPEND_SC;
     v3c_streams streams = {};
-    /*
+    /* debug code, alternative to below socket mux initialization
     if (rec) {
         streams.vps = sess->create_stream(4998, 4999, RTP_FORMAT_GENERIC, flags);
         streams.ad = sess->create_stream(5000, 5001, RTP_FORMAT_ATLAS, flags);
@@ -557,7 +558,7 @@ void copy_rtp_payload(std::vector<v3c_unit_info>* units, uint64_t max_size, uvgr
 {
     //uint32_t seq = frame->header.seq;
     if (units->back().nal_infos.size() == max_size) {
-        v3c_unit_header hdr = { units->back().header.vuh_unit_type};
+        v3c_unit_header hdr = { units->back().header.vuh_unit_type, {} };
         v3c_unit_info info = { hdr, {}, 0, false };
         switch (units->back().header.vuh_unit_type) {
             case V3C_AD: {
