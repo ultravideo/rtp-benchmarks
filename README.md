@@ -150,6 +150,8 @@ Latency receiver example:
    --port 9999
 ```
 
+The framework can also be used to benchmark transmission of Video-based Point Cloud Compression (V-PCC) files via uvgRTP. For this, specify the file format using `--format vpcc` for both sender and receiver and use a `.vpcc` file as the input. Both goodput and latency benchmarks support V-PCC files.
+
 The latency results will only appear in the sending end. These too can be parsed into a summary with `parse.pl` script.
 
 ## Phase 4: Parsing the benchmark results
