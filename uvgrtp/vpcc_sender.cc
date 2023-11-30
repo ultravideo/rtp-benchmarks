@@ -18,6 +18,8 @@ struct stream_results { // Save stats of each stream
     uint64_t end = 0;
 };
 
+bool srtp_enabled = false;
+
 void sender_func(uvgrtp::media_stream* stream, const char* cbuf, int fmt, float fps, const std::vector<v3c_unit_info> &units,
     stream_results &res);
 
@@ -40,7 +42,7 @@ int main(int argc, char **argv)
     //int nthreads               = atoi(argv[7]);
     //bool vvc_enabled           = get_vvc_state(argv[9]);
     //bool atlas_enabled         = get_atlas_state(argv[9]);
-    //bool srtp_enabled          = get_srtp_state(argv[10]);
+    srtp_enabled                 = get_srtp_state(argv[10]);
 
     std::cout << "Starting uvgRTP V-PCC sender round. " << local_address << ":" << local_port
         << "->" << remote_address << ":" << remote_port << std::endl;
@@ -49,7 +51,26 @@ int main(int argc, char **argv)
     uvgrtp::session* sess = rtp_ctx.create_session(remote_address, local_address);
 
     int flags = RCE_PACE_FRAGMENT_SENDING;
+    if (srtp_enabled) {
+        flags = RCE_SRTP | RCE_SRTP_KMNGMNT_USER;
+    }
     v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, flags, false);
+
+    if (srtp_enabled) {
+        std::cout << "SRTP enabled" << std::endl;
+        uint8_t key[KEY_SIZE] = { 0 };
+        uint8_t salt[SALT_SIZE] = { 0 };
+
+        for (int i = 0; i < KEY_SIZE; ++i)
+            key[i] = i + 7;
+        for (int i = 0; i < SALT_SIZE; ++i)
+            key[i] = i + 13;
+
+        streams.ad->add_srtp_ctx(key, salt);
+        streams.ovd->add_srtp_ctx(key, salt);
+        streams.gvd->add_srtp_ctx(key, salt);
+        streams.avd->add_srtp_ctx(key, salt);
+    }
 
     size_t len = 0;
     void* mem = get_mem(input_file, len);

@@ -15,6 +15,8 @@
 
 int TIMEOUT = 1000;
 
+bool srtp_enabled = false;
+
 struct stream_results { // Save stats of each stream
     size_t packets_received = 0;
     size_t bytes_received = 0;
@@ -42,7 +44,7 @@ int main(int argc, char** argv)
     //int nthreads               = atoi(argv[6]);
     //bool vvc_enabled  = get_vvc_state(argv[7]);
     //bool atlas_enabled  = get_atlas_state(argv[7]);
-    //bool srtp_enabled = get_srtp_state(argv[8]);
+    srtp_enabled          = get_srtp_state(argv[8]);
 
     std::cout << "Starting uvgRTP V-PCC receiver tests. " << local_address << ":" << local_port 
         << "<-" << remote_address << ":" << remote_port << std::endl;
@@ -51,7 +53,26 @@ int main(int argc, char** argv)
     uvgrtp::session* sess = rtp_ctx.create_session(remote_address, local_address);
 
     int flags = 0;
+    if (srtp_enabled) {
+        flags = RCE_SRTP | RCE_SRTP_KMNGMNT_USER;
+    }
     v3c_streams streams = init_v3c_streams(sess, local_port, remote_port, flags, true);
+
+    if (srtp_enabled) {
+        std::cout << "SRTP enabled" << std::endl;
+        uint8_t key[KEY_SIZE] = { 0 };
+        uint8_t salt[SALT_SIZE] = { 0 };
+
+        for (int i = 0; i < KEY_SIZE; ++i)
+            key[i] = i + 7;
+        for (int i = 0; i < SALT_SIZE; ++i)
+            key[i] = i + 13;
+
+        streams.ad->add_srtp_ctx(key, salt);
+        streams.ovd->add_srtp_ctx(key, salt);
+        streams.gvd->add_srtp_ctx(key, salt);
+        streams.avd->add_srtp_ctx(key, salt);
+    }
 
     stream_results ad_r;
     stream_results ovd_r;
