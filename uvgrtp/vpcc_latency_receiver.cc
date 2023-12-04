@@ -18,7 +18,7 @@ int ovd = 0;
 int gvd = 0;
 int avd = 0;
 
-// encryption parameters of example
+// encryption parameters
 enum Key_length{SRTP_128 = 128, SRTP_196 = 196, SRTP_256 = 256};
 constexpr Key_length KEY_S = SRTP_256;
 constexpr int KEY_SIZE_BYTES = KEY_S/8;
