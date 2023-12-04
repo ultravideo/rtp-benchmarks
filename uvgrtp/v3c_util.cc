@@ -286,7 +286,6 @@ v3c_streams init_v3c_streams(uvgrtp::session* sess, uint16_t src_port, uint16_t 
     v3c_streams streams = {};
     /* debug code, alternative to below socket mux initialization
     if (rec) {
-        streams.vps = sess->create_stream(4998, 4999, RTP_FORMAT_GENERIC, flags);
         streams.ad = sess->create_stream(5000, 5001, RTP_FORMAT_ATLAS, flags);
         streams.ovd = sess->create_stream(5002, 5003, RTP_FORMAT_H265, flags);
         streams.gvd = sess->create_stream(6000, 6002, RTP_FORMAT_H265, flags);
@@ -299,7 +298,6 @@ v3c_streams init_v3c_streams(uvgrtp::session* sess, uint16_t src_port, uint16_t 
         streams.gvd = sess->create_stream(6002, 6000, RTP_FORMAT_H265, flags);
         streams.avd = sess->create_stream(5007, 5006, RTP_FORMAT_H265, flags);
     }*/
-    streams.vps = sess->create_stream(src_port, dst_port, RTP_FORMAT_GENERIC, flags);
     streams.ad = sess->create_stream(src_port, dst_port, RTP_FORMAT_ATLAS, flags);
     streams.ovd = sess->create_stream(src_port, dst_port, RTP_FORMAT_H265, flags);
     streams.gvd = sess->create_stream(src_port, dst_port, RTP_FORMAT_H265, flags);
@@ -316,26 +314,22 @@ v3c_streams init_v3c_streams(uvgrtp::session* sess, uint16_t src_port, uint16_t 
     streams.avd->configure_ctx(RCC_PKT_MAX_DELAY, 1000);
     
     if (rec) {
-        streams.vps->configure_ctx(RCC_REMOTE_SSRC, 1);
         streams.ad->configure_ctx(RCC_REMOTE_SSRC, 2);
         streams.ovd->configure_ctx(RCC_REMOTE_SSRC, 3);
         streams.gvd->configure_ctx(RCC_REMOTE_SSRC, 4);
         streams.avd->configure_ctx(RCC_REMOTE_SSRC, 5);
 
-        streams.vps->configure_ctx(RCC_SSRC, 11);
         streams.ad->configure_ctx(RCC_SSRC, 22);
         streams.ovd->configure_ctx(RCC_SSRC, 33);
         streams.gvd->configure_ctx(RCC_SSRC, 44);
         streams.avd->configure_ctx(RCC_SSRC, 55);
     }
     else {
-        streams.vps->configure_ctx(RCC_SSRC, 1);
         streams.ad->configure_ctx(RCC_SSRC, 2);
         streams.ovd->configure_ctx(RCC_SSRC, 3);
         streams.gvd->configure_ctx(RCC_SSRC, 4);
         streams.avd->configure_ctx(RCC_SSRC, 5);
 
-        streams.vps->configure_ctx(RCC_REMOTE_SSRC, 11);
         streams.ad->configure_ctx(RCC_REMOTE_SSRC, 22);
         streams.ovd->configure_ctx(RCC_REMOTE_SSRC, 33);
         streams.gvd->configure_ctx(RCC_REMOTE_SSRC, 44);
