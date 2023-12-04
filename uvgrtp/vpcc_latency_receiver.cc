@@ -13,6 +13,11 @@ bool frame_received = true;
 int TIMEOUT = 250;
 bool srtp_enabled = false;
 
+int ad = 0;
+int ovd = 0;
+int gvd = 0;
+int avd = 0;
+
 // encryption parameters of example
 enum Key_length{SRTP_128 = 128, SRTP_196 = 196, SRTP_256 = 256};
 constexpr Key_length KEY_S = SRTP_256;
@@ -27,6 +32,7 @@ void ad_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
         std::cout << "Error sending frame" << std::endl;
     }
     frame_received = true;
+    ad++;
 }
 void ovd_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
@@ -35,7 +41,7 @@ void ovd_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
         std::cout << "Error sending frame" << std::endl;
     }
     frame_received = true;
-
+    ovd++;
 }
 void gvd_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
@@ -44,6 +50,7 @@ void gvd_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
         std::cout << "Error sending frame" << std::endl;
     }
     frame_received = true;
+    gvd++;
 }
 void avd_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
@@ -52,6 +59,7 @@ void avd_hook_rec(void* arg, uvg_rtp::frame::rtp_frame* frame)
         std::cout << "Error sending frame" << std::endl;
     }
     frame_received = true;
+    avd++;
 }
 
 int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port)
@@ -94,6 +102,12 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
         std::this_thread::sleep_for(std::chrono::milliseconds(TIMEOUT));
     }
     std::cout << "No more frames received for " << TIMEOUT << " ms, end round" << std::endl;
+
+    // Debug prints
+    std::cout << "AD NALS received: " << ad << std::endl;
+    std::cout << "OVD NALS received: " << ovd << std::endl;
+    std::cout << "GVD NALS received: " << gvd << std::endl;
+    std::cout << "AVD NALS received: " << avd << std::endl;
 
     sess->destroy_stream(streams.ad);
     sess->destroy_stream(streams.ovd);
