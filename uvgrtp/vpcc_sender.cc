@@ -96,6 +96,9 @@ int main(int argc, char **argv)
     stream_results gvd_r = {0,0,0};
     stream_results avd_r = {0,0,0};
 
+   // Sleep a moment to make sure that the receiver is ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(40)); 
+    
         /* Start sending data */
     std::unique_ptr<std::thread> ad_thread =
         std::unique_ptr<std::thread>(new std::thread(sender_func, streams.ad, cbuf, V3C_AD, fps, mmap.ad_units, std::ref(ad_r)));

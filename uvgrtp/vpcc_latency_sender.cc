@@ -22,7 +22,7 @@ std::vector<long long> ovd_recv = {};
 std::vector<long long> gvd_recv = {};
 std::vector<long long> avd_recv = {};
 
-// encryption parameters of example
+// encryption parameters
 enum Key_length{SRTP_128 = 128, SRTP_196 = 196, SRTP_256 = 256};
 constexpr Key_length KEY_S = SRTP_256;
 constexpr int KEY_SIZE_BYTES = KEY_S/8;
@@ -116,6 +116,9 @@ static int sender(std::string input_file, std::string local_address, int local_p
     streams.ovd->install_receive_hook(nullptr, ovd_hook);
     streams.gvd->install_receive_hook(nullptr, gvd_hook);
     streams.avd->install_receive_hook(nullptr, avd_hook);
+
+    // Sleep a moment to make sure that the receiver is ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(40)); 
 
     /* Start sending data */
     std::unique_ptr<std::thread> ad_thread =

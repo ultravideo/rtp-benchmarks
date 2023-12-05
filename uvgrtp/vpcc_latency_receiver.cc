@@ -10,7 +10,7 @@
 #include <chrono>
 
 bool frame_received = true;
-int TIMEOUT = 250;
+int TIMEOUT = 300;
 bool srtp_enabled = false;
 
 int ad = 0;
