@@ -7,7 +7,7 @@
 #define KEY_SIZE   16
 #define SALT_SIZE  14
 
-constexpr int EXPECTED_FRAMES = 602;
+constexpr int EXPECTED_FRAMES = 604;
 
 void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrtp::media_stream** mStream,
     std::string remote_address, std::string local_address, uint16_t local_port, uint16_t remote_port, 

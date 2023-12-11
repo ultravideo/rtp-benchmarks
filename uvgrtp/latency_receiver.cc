@@ -13,6 +13,10 @@ bool frame_received = true;
 int total_frames_received = 0;
 bool atlas_enabled = false;
 
+size_t ninters  = 0;
+size_t nintras  = 0;
+size_t n_non_vcl = 0;
+
 void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
 {
     // send the frame immediately back
@@ -26,6 +30,17 @@ void hook_receiver(void* arg, uvg_rtp::frame::rtp_frame* frame)
     }
     frame_received = true;
     ++total_frames_received;
+
+    uint8_t nalu_t = (frame->payload[4] >> 1) & 0x3f;
+        if (nalu_t <= 15) { // inter frame
+            ninters++;
+        }
+        else if (nalu_t >= 16 && nalu_t <= 23) { // intra frame
+            nintras++;
+        }
+        else {
+            n_non_vcl++;
+        }
 }
 
 int receiver(std::string local_address, int local_port, std::string remote_address, int remote_port,
@@ -53,6 +68,7 @@ int receiver(std::string local_address, int local_port, std::string remote_addre
         std::cout << "Received " << total_frames_received << " frames. No more frames received for "
             << timout << " ms." << std::endl;
     }
+    std::cout << "intras: " << nintras << ", inters: " << ninters << ", non-vcl: " << n_non_vcl << std::endl;
     cleanup_uvgrtp(rtp_ctx, session, receive);
 
     return EXIT_SUCCESS;

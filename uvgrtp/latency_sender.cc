@@ -16,6 +16,8 @@ std::chrono::high_resolution_clock::time_point frame_send_time;
 size_t frames   = 0;
 size_t ninters  = 0;
 size_t nintras  = 0;
+size_t n_non_vcl = 0;
+
 std::vector<long long> intra_send = {};
 std::vector<long long> inter_send = {};
 
@@ -111,9 +113,10 @@ static void hook_sender(void *arg, uvg_rtp::frame::rtp_frame *frame)
                 nintras++;
                 frames++;
             }
-            /*else { // non-VCL frame - remove commenting if needed
-                std::cout << "Non-VCL HEVC NAL unit received" << std::endl;
-            }*/
+            else { // non-VCL frame
+                n_non_vcl++;
+                //std::cout << "Non-VCL HEVC NAL unit received" << std::endl;
+            }
         }
         ++total_frames_received;
     }
@@ -160,6 +163,9 @@ static int sender(std::string input_file, std::string local_address, int local_p
     size_t offset = 0;
     rtp_error_t ret = RTP_OK;
     uint8_t* bytes = (uint8_t*)mem;
+
+    // give the receiver a moment to get ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(40)); 
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     if(atlas_enabled) {
@@ -226,8 +232,8 @@ static int sender(std::string input_file, std::string local_address, int local_p
     std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
 
     cleanup_uvgrtp(rtp_ctx, session, send);
-    std::cout << "total intra " << total_intra << ", total_inter " << total_inter << std::endl;
-    std::cout << "nintras " << nintras << ", ninters " << ninters << std::endl;
+    std::cout << "total intra time " << total_intra << ", total inter time " << total_inter << std::endl;
+    std::cout << "intras: " << nintras << ", inters: " << ninters << ", non-vcl: " << n_non_vcl << std::endl;
     fprintf(stderr, "%zu: intra %lf, inter %lf, avg %lf\n",
         frames,
         total_intra / (float)nintras,
