@@ -1,22 +1,34 @@
 .PHONY: all clean
 
 CXX = g++
-CXXFLAGS = -Wall -Wextra -O2 -std=c++11 -g
+CXXFLAGS = -Wall -Wextra -O2 -std=c++17 -g
 
 test_file_creation: util/test_file_creation.cc util/util.cc
 	$(CXX) $(CXXFLAGS) -o test_file_creation util/test_file_creation.cc util/util.cc -lkvazaar -lpthread 
 
 uvgrtp_sender: uvgrtp/sender.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
+	$(CXX) $(CXXFLAGS) -o uvgrtp/sender uvgrtp/sender.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
 
 uvgrtp_receiver: uvgrtp/receiver.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc -luvgrtp -lpthread -lcryptopp
+	$(CXX) $(CXXFLAGS) -o uvgrtp/receiver uvgrtp/receiver.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp
 
 uvgrtp_latency_sender: uvgrtp/latency_sender.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
+	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_sender uvgrtp/latency_sender.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
 
 uvgrtp_latency_receiver: uvgrtp/latency_receiver.cc util/util.cc
-	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc -luvgrtp -lpthread -lcryptopp 
+	$(CXX) $(CXXFLAGS) -o uvgrtp/latency_receiver uvgrtp/latency_receiver.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
+
+uvgrtp_vpcc_latency_sender: uvgrtp/vpcc_latency_sender.cc util/util.cc
+	$(CXX) $(CXXFLAGS) -o uvgrtp/vpcc_latency_sender uvgrtp/vpcc_latency_sender.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
+
+uvgrtp_vpcc_latency_receiver: uvgrtp/vpcc_latency_receiver.cc util/util.cc
+	$(CXX) $(CXXFLAGS) -o uvgrtp/vpcc_latency_receiver uvgrtp/vpcc_latency_receiver.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
+	
+uvgrtp_vpcc_sender: uvgrtp/vpcc_sender.cc util/util.cc
+	$(CXX) $(CXXFLAGS) -o uvgrtp/vpcc_sender uvgrtp/vpcc_sender.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
+
+uvgrtp_vpcc_receiver: uvgrtp/vpcc_receiver.cc util/util.cc
+	$(CXX) $(CXXFLAGS) -o uvgrtp/vpcc_receiver uvgrtp/vpcc_receiver.cc util/util.cc uvgrtp/v3c_util.cc -luvgrtp -lpthread -lcryptopp 
 
 # ffmpeg_sender:
 # 	$(CXX) $(CXXFLAGS) -Wno-unused -Wno-deprecated-declarations -Wno-unused-result -o ffmpeg/sender \
@@ -76,5 +88,7 @@ live555_latency_receiver: live555/latency_receiver.cc
 
 clean:
 	rm -f uvgrtp/receiver uvgrtp/sender  uvgrtp/latency_sender uvgrtp/latency_receiver \
+		uvgrtp/vpcc_latency_sender	uvgrtp/vpcc_latency_receiver \
+		uvgrtp/vpcc_sender	uvgrtp/vpcc_receiver \
 		ffmpeg/receiver ffmpeg/sender ffmpeg/latency_sender ffmpeg/latency_receiver \
 		live555/receiver live555/sender live555/latency test_file_creation

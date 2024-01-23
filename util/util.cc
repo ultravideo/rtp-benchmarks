@@ -143,6 +143,16 @@ void write_receive_results_to_file(const std::string& filename,
     result_file.close();
 }
 
+void write_latency_results_to_file(const std::string& filename,
+    const size_t frames, const float intra, const float inter, const float avg)
+{
+    std::cout << "Writing latency results into file: " << filename << std::endl;
+    std::ofstream result_file;
+    result_file.open(filename, std::ios::out | std::ios::app | std::ios::ate);
+    result_file << frames << ";" << intra << ";" << inter << ";" << avg << std::endl;
+    result_file.close();
+}
+
 bool get_srtp_state(std::string srtp)
 {
     if (srtp == "1" || srtp == "yes" || srtp == "y" || srtp == "srtp")
@@ -159,9 +169,17 @@ bool get_vvc_state(std::string format)
     {
         return true;
     }
-    else if (format != "hevc" && format != "h265")
-    {
+    else if (format != "hevc" && format != "h265" && format != "atlas" && format != "vpcc")    {
         std::cerr << "Unsupported sender format: " << format << std::endl;
+    }
+    return false;
+}
+
+bool get_atlas_state(std::string format)
+{
+    if (format == "atlas")
+    {
+        return true;
     }
     return false;
 }

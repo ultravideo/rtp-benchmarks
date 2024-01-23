@@ -158,6 +158,118 @@ sub recv_benchmark {
     $socket->close();
 }
 
+sub vpcc_send_benchmark {
+    print "V-PCC benchmark sender\n";
+
+    my ($lib, $file, $saddr, $raddr, $port, $iter, $threads, $gen_recv, $e, $format, $srtp, @fps_vals) = @_;
+    my ($socket, $remote, $data);
+    my @execs = split ",", $e;
+
+    print "Waiting for receiver to connect to our TCP socket\n";
+
+    $socket = mk_ssock($saddr, $port);
+    $remote = $socket->accept();
+
+    my $result_directory = "./$lib/results";
+    print "Checking existance of results folder $result_directory\n";
+
+    unless(-e $result_directory or mkdir $result_directory) {
+        die "Unable to create $result_directory\n";
+    }
+
+    print "Starting send benchmark for $lib\n";
+
+    foreach (@execs) {
+        my $exec = $_;
+
+        unless(-e "./$lib/$exec") {
+            die "The executable ./$lib/$exec has not been created! \n";
+        }
+        foreach ((1 .. $threads)) {
+            my $thread = $_;
+            foreach (@fps_vals) {
+
+                my $fps = $_;
+                my $logname = "send_$format" . "_RTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                if ($srtp)
+                {
+                    $logname = "send_$format" . "_SRTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                }
+
+                my $result_file = "$lib/results/$logname";
+
+                unlink $result_file if -e $result_file; # erase old results if they exist
+
+                for ((1 .. $iter)) {
+                    print "Starting to benchmark sending at $fps fps, round $_\n";
+                    $remote->recv($data, 16);
+                    my $exit_code = system ("(time ./$lib/$exec $file $result_file $saddr $port $raddr $port $thread $fps $format $srtp) 2>> $result_file");
+                    $remote->send("end") if $gen_recv;
+                    
+                    die "Sender failed! \n" if ($exit_code ne 0);
+                }
+            }
+        }
+    }
+
+    print "V-PCC benchmark sender finished\n";
+    $socket->close();
+}
+
+sub vpcc_recv_benchmark {
+    print "V-PCC benchmark receiver\n";
+    my ($lib, $saddr, $raddr, $port, $iter, $threads, $e, $format, $srtp, @fps_vals) = @_;
+    
+    print "Connecting to the TCP socket of the sender\n";
+    my $socket = mk_rsock($saddr, $port);
+    my @execs = split ",", $e;
+
+    my $result_directory = "./$lib/results";
+    print "Checking existance of results folder $result_directory\n";
+
+    unless(-e $result_directory or mkdir $result_directory) {
+        die "Unable to create $result_directory\n";
+    }
+
+    print "Starting receive benchmark for $lib\n";
+
+    foreach (@execs) {
+        my $exec = $_;
+
+        unless(-e "./$lib/$exec") {
+            die "The executable ./$lib/$exec has not been created! \n";
+        }
+
+        foreach ((1 .. $threads)) {
+            my $thread = $_;
+            foreach (@fps_vals) {
+                my $fps = $_;
+                my $logname = "recv_$format" . "_RTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                if ($srtp)
+                {
+                    $logname = "recv_$format" . "_SRTP" . "_$thread" . "threads_$fps". "fps_$iter" . "rounds";
+                }
+
+                my $result_file = "$lib/results/$logname";
+
+                unlink $result_file if -e $result_file; # erase old results if they exist
+
+                for ((1 .. $iter)) {
+                    Time::HiRes::sleep(0.1); # sleep so packets from previous test don't interfere
+                    print "Starting to benchmark receive at $fps fps, round $_\n";
+                    $socket->send("start"); # I believe this is used to avoid firewall from blocking traffic
+                    # please note that the local address for receiver is raddr
+                    my $exit_code = system ("(time ./$lib/vpcc_receiver $result_file $raddr $port $saddr $port $thread $format $srtp) 2>> $result_file");
+                    die "Receiver failed! \n" if ($exit_code ne 0);
+                }
+            }
+        }
+    }
+
+    print "V-PCC benchmark receiver finished\n";
+    $socket->close();
+}
+
 # use netcat to capture the stream
 sub recv_generic {
     print "Start netcat receiver\n";
@@ -256,6 +368,63 @@ sub recv_latency {
     $socket->close();
 }
 
+sub vpcc_send_latency {
+    
+    my ($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp) = @_;
+    my ($socket, $remote, $data);
+    print "VPCC latency send benchmark for $lib\n";
+    
+    unless(-e "./$lib/vpcc_latency_sender") {
+        die "The executable ./$lib/latency_sender has not been created! \n";
+    }
+    
+    $socket = mk_ssock($saddr, $port);
+    $remote = $socket->accept();
+    
+    my $logname = "latencies_$format" . "_RTP_$fps". "fps_$iter" . "rounds";
+    if ($srtp)
+    {
+        $logname = "latencies_$format" . "_SRTP_$fps". "fps_$iter" . "rounds";
+    }
+    
+
+    
+    my $result_file = "$lib/results/$logname";
+    unlink $result_file if -e $result_file; # erase old results if they exist
+    
+    for ((1 .. $iter)) {
+        print "Latency send benchmark round $_" . "/$iter\n";
+        $remote->recv($data, 16);
+        
+        my $exit_code = system ("./$lib/vpcc_latency_sender $file $saddr $port $raddr $port $fps $format $srtp 2>> $result_file 2>&1");
+        die "Latency sender failed! \n" if ($exit_code ne 0);
+    }
+    print "VPCC latency send benchmark finished\n";
+    $socket->close();
+}
+
+sub vpcc_recv_latency {
+    my ($lib, $saddr, $raddr, $port, $iter, $format, $srtp) = @_;
+    print "VPCC latency receive benchmark for $lib\n";
+    
+    unless(-e "./$lib/vpcc_latency_receiver") {
+        die "The executable ./$lib/latency_receiver has not been created! \n";
+    }
+    
+    my $socket = mk_rsock($saddr, $port);
+    
+    for ((1 .. $iter)) {
+        print "Latency receive benchmark round $_" . "/$iter\n";
+        sleep 1; # 1 s, make sure the sender has managed to catch up
+        $socket->send("start");
+        
+        my $exit_code = system ("./$lib/vpcc_latency_receiver $raddr $port $saddr $port $format $srtp");
+        die "Latency receiver failed! \n" if ($exit_code ne 0);
+    }
+    print "VPCC latency receive benchmark finished\n";
+    $socket->close();
+}
+
 # TODO explain every parameter
 sub print_help {
     print "usage (benchmark):\n  ./benchmark.pl \n"
@@ -317,7 +486,7 @@ die "Please specify role with --role" if !$role;
 
 
 die "library not supported\n" if !grep (/$lib/, ("uvgrtp", "ffmpeg", "live555"));
-die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266"));
+die "format not supported\n"  if !grep (/$format/, ("hevc", "vvc", "h265", "h266", "atlas", "vpcc"));
 
 $fps = 30.0 if $lat and !$fps;
 
@@ -352,27 +521,58 @@ if ($role eq "send" or $role eq "sender") {
     }
     
     if ($lat) {
-        system "make $lib" . "_latency_sender";
-        send_latency($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp);
-    } else {
-        if ($exec eq "default") {
-            system "make $lib" . "_sender";
-            $exec = "sender";
+        if($format eq "vpcc") {
+            system "make $lib" . "_vpcc_latency_sender";
+            vpcc_send_latency($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp);  
         }
-        send_benchmark($lib, $file, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
+        else {
+            system "make $lib" . "_latency_sender";
+            send_latency($lib, $file, $saddr, $raddr, $port, $fps, $iter, $format, $srtp);  
+        }
+
+    } else {
+        if($format eq "vpcc") {
+            if ($exec eq "default") {
+                system "make $lib" . "_vpcc_sender";
+                $exec = "vpcc_sender";
+            }
+            vpcc_send_benchmark($lib, $file, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
+        }
+        else {
+            if ($exec eq "default") {
+                system "make $lib" . "_sender";
+                $exec = "sender";
+            }
+            send_benchmark($lib, $file, $saddr, $raddr, $port, $iter, $threads, $nc, $exec, $format, $srtp, @fps_vals);
+        }
     }
 } elsif ($role eq "recv" or $role eq "receive" or $role eq "receiver") {
     die "Please specify test format with --format for receiver" if !$format;
     
     if ($lat) {
-        system "make $lib" . "_latency_receiver";
-        recv_latency($lib, $saddr, $raddr, $port, $iter, $format, $srtp);
-    } elsif (!$nc) {
-        if ($exec eq "default") {
-            system "make $lib" . "_receiver";
-            $exec = "receiver";
+        if($format eq "vpcc") {
+            system "make $lib" . "_vpcc_latency_receiver";
+            vpcc_recv_latency($lib, $saddr, $raddr, $port, $iter, $format, $srtp);
         }
-        recv_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $exec, $format, $srtp, @fps_vals);
+        else {
+            system "make $lib" . "_latency_receiver";
+            recv_latency($lib, $saddr, $raddr, $port, $iter, $format, $srtp);
+        }
+    } elsif (!$nc) {
+        if($format eq "vpcc") {
+            if ($exec eq "default") {
+                system "make $lib" . "_vpcc_receiver";
+                $exec = "vpcc_receiver";
+            }
+            vpcc_recv_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $exec, $format, $srtp, @fps_vals);
+        }
+        else {
+            if ($exec eq "default") {
+                system "make $lib" . "_receiver";
+                $exec = "receiver";
+            }
+            recv_benchmark($lib, $saddr, $raddr, $port, $iter, $threads, $exec, $format, $srtp, @fps_vals);
+        }
     } else {
         recv_generic($lib, $saddr, $port, $iter, $threads, @fps_vals);
     }

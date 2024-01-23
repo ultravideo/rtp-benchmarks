@@ -7,11 +7,11 @@
 #define KEY_SIZE   16
 #define SALT_SIZE  14
 
-constexpr int EXPECTED_FRAMES = 602;
+constexpr int EXPECTED_FRAMES = 604;
 
 void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrtp::media_stream** mStream,
     std::string remote_address, std::string local_address, uint16_t local_port, uint16_t remote_port, 
-    bool srtp, bool vvc, bool optimize_latency)
+    bool srtp, bool vvc, bool optimize_latency, bool atlas)
 {
     int flags = RCE_NO_FLAGS;
 
@@ -30,6 +30,9 @@ void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrt
     if (vvc)
     {
         fmt = RTP_FORMAT_H266;
+    }
+    if(atlas) {
+        fmt = RTP_FORMAT_ATLAS;
     }
 
     (*session) = rtp_ctx.create_session(remote_address, local_address);
@@ -61,7 +64,8 @@ void intialize_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session** session, uvgrt
     (*mStream)->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
     (*mStream)->configure_ctx(RCC_RING_BUFFER_SIZE, 40 * 1000 * 1000);
     (*mStream)->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
-    (*mStream)->configure_ctx(RCC_PKT_MAX_DELAY, 100);
+    (*mStream)->configure_ctx(RCC_PKT_MAX_DELAY, 1000);
+    (*mStream)->configure_ctx(RCC_POLL_TIMEOUT, 1000);
 }
 
 void cleanup_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session* session, uvgrtp::media_stream* mStream)
@@ -75,4 +79,29 @@ void cleanup_uvgrtp(uvgrtp::context& rtp_ctx, uvgrtp::session* session, uvgrtp::
 
         rtp_ctx.destroy_session(session);
     }
+}
+
+long long get_current_time() {
+    auto time = std::chrono::high_resolution_clock::now();
+    auto since_epoch = std::chrono::time_point_cast<std::chrono::microseconds>(time);
+    auto duration = since_epoch.time_since_epoch();
+    return duration.count();
+}
+
+long long find_earliest_time_point(
+    const long long& t1,
+    const long long& t2,
+    const long long& t3,
+    const long long& t4) {
+
+    return std::min(std::min(std::min(t1, t2), t3), t4);
+}
+
+long long find_latest_time_point(
+    const long long& t1,
+    const long long& t2,
+    const long long& t3,
+    const long long& t4) {
+
+    return std::max(std::max(std::max(t1, t2), t3), t4);
 }
